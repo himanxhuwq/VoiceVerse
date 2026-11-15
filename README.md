@@ -78,7 +78,7 @@ Models are never hard-coded: VoiceVerse asks the provider which models your key 
 | **1. Story** | Paste text, upload a `.txt`, or have the AI write a story from an idea |
 | **2. Analysis** | AI splits the story into scenes and speaker-tagged lines, finds characters (gender, age), mood per scene, genre, narration style and sound cues |
 | **3. Voices** | The AI recommends the best voice for each character from their lines, with a reason; tune speed, tone and emotion, and preview any line |
-| **4. Build** | Lines are recorded with ElevenLabs (3 in parallel), music is scored per mood, effects are placed, everything is mixed |
+| **4. Build** | Lines are recorded with ElevenLabs (2 at a time, the free-plan limit, with automatic retries), music is scored per mood, effects are placed, everything is mixed |
 | **5. Timeline** | Multi-track editor: narration, dialogue, music and effects. Change a scene's music, swap, move, re-level or remove effects, reassign a line's speaker |
 | **6. Listen** | Player with live lyrics, scene chapters, seekable waveform and "who's speaking" cast |
 | **7. Export** | Download MP3 or WAV, or copy the full script |
