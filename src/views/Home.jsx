@@ -6,7 +6,7 @@ import { go } from '../state/navigation';
 import { Bars, Dot, Icon, rise, stagger } from '../components/ui';
 
 const HOW = [
-  ['01', 'Write or paste', '300–500 words, or generate one'],
+  ['01', 'Write or paste', 'Up to 1,000 words, or generate one'],
   ['02', 'AI reads it', 'Scenes, characters, mood'],
   ['03', 'Voices + sound', 'Cast, music bed, effects'],
   ['04', 'Play & download', 'WAV or MP3'],

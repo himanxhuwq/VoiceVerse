@@ -9,6 +9,9 @@ import { toast } from '../state/toast';
 import { generateStory } from '../ai/gemini';
 import { Icon } from '../components/ui';
 
+/** Longest story the app accepts (longer stories take longer to analyse and record). */
+const MAX_WORDS = 1000;
+
 const TABS = [
   ['paste', 'text-aa', 'Paste text'],
   ['upload', 'upload-simple', 'Upload .txt'],
@@ -16,12 +19,11 @@ const TABS = [
 ];
 
 function wordMessage(w) {
-  if (w === 0) return 'Start with 300–500 words';
+  if (w === 0) return `Up to ${MAX_WORDS} words`;
   if (w < 40) return 'A little more, please (40 words minimum)';
   if (w < 300) return 'Short and sweet, about ' + Math.max(1, Math.round(w / 150)) + ' min';
-  if (w <= 500) return 'Good length for a ' + Math.round(w / 150) + '–' + Math.round(w / 120) + ' minute story';
-  if (w <= 800) return 'Longer than the demo limit; it will take longer';
-  return 'Too long for now: keep it under 800 words';
+  if (w <= MAX_WORDS) return 'Good length for a ' + Math.round(w / 150) + '–' + Math.round(w / 120) + ' minute story';
+  return `Too long: keep it under ${MAX_WORDS} words`;
 }
 
 function UploadTab() {
@@ -128,7 +130,7 @@ export default function Story() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const w = words(state.text);
-  const meterClass = w > 800 ? 'bad' : w > 500 ? 'warn' : '';
+  const meterClass = w > MAX_WORDS ? 'bad' : w > MAX_WORDS * 0.85 ? 'warn' : '';
 
   const update = (patch) => {
     Object.assign(S, patch);
@@ -197,11 +199,11 @@ export default function Story() {
             </AnimatePresence>
             <div className="ft">
               <span className="mono" style={{ fontSize: 14 }}>
-                <b>{w}</b> <span className="hint">/ 500 words</span>
+                <b>{w}</b> <span className="hint">/ {MAX_WORDS} words</span>
               </span>
               <span className={`meter ${meterClass}`}>
                 <motion.i
-                  animate={{ width: clamp((w / 500) * 100, 0, 100) + '%' }}
+                  animate={{ width: clamp((w / MAX_WORDS) * 100, 0, 100) + '%' }}
                   transition={{ type: 'spring', stiffness: 200, damping: 30 }}
                 />
               </span>
@@ -291,7 +293,7 @@ export default function Story() {
             whileTap={{ scale: 0.98 }}
             className="btn btn-p btn-l"
             style={{ marginTop: 'auto' }}
-            disabled={w < 40 || w > 1000 || busy}
+            disabled={w < 40 || w > MAX_WORDS || busy}
             onClick={analyse}
           >
             {busy ? (
