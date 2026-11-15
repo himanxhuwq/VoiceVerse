@@ -32,6 +32,12 @@ export async function findWorkingModel(key, signal) {
   return models[0];
 }
 
+/**
+ * Gemini's newer models "think" before answering, which can take minutes on a long story.
+ * We switch thinking off for speed; if a model refuses that setting we stop sending it.
+ */
+let thinkingOffSupported = true;
+
 async function generate(model, key, prompt, json, signal) {
   return fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
@@ -42,9 +48,19 @@ async function generate(model, key, prompt, json, signal) {
       generationConfig: {
         temperature: json ? 0.3 : 0.9,
         ...(json ? { responseMimeType: 'application/json' } : {}),
+        ...(thinkingOffSupported ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
     }),
   });
+}
+
+/** A message a person can act on, for the Gemini errors people actually hit. */
+function geminiErrorText(status, msg) {
+  if (status === 400 && /api key/i.test(msg)) return 'Gemini rejected the API key. Check it in AI keys settings.';
+  if (status === 403) return 'This Gemini key is not allowed to use the API (check it is enabled in Google AI Studio).';
+  if (status === 429) return 'Gemini rate or quota limit reached. Wait a minute and try again.';
+  if (status >= 500) return `Gemini had a server problem (${status}). Try again.`;
+  return `Gemini ${status}: ${msg}`;
 }
 
 async function errorMessage(res) {
@@ -60,33 +76,45 @@ async function errorMessage(res) {
  * If the chosen model has been retired, it switches to the newest available Flash model,
  * remembers it, and retries once. The whole call is cut off after GEMINI_TIMEOUT_MS.
  */
-export async function callGemini(prompt, json = true) {
+export async function callGemini(prompt, json = true, timeoutMs = GEMINI_TIMEOUT_MS) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     return await request(prompt, json, ctrl.signal);
   } catch (e) {
-    if (ctrl.signal.aborted) throw new Error(`Gemini took longer than ${GEMINI_TIMEOUT_MS / 1000} seconds`);
+    if (ctrl.signal.aborted) throw new Error(`Gemini took longer than ${timeoutMs / 1000} seconds`);
     throw e;
   } finally {
     clearTimeout(timer);
   }
 }
 
+/** One attempt: returns { ok: true, res } or { ok: false, status, msg } (the error body is read once). */
+async function attempt(model, key, prompt, json, signal) {
+  const res = await generate(model, key, prompt, json, signal);
+  if (res.ok) return { ok: true, res };
+  return { ok: false, status: res.status, msg: await errorMessage(res) };
+}
+
 async function request(prompt, json, signal) {
   const { gem, gemModel } = cfg();
-  let res = await generate(gemModel, gem, prompt, json, signal);
-  if (!res.ok) {
-    let msg = await errorMessage(res);
-    if (isRetiredModel(res.status, msg)) {
-      const model = await findWorkingModel(gem, signal);
+  let model = gemModel;
+  let r = await attempt(model, gem, prompt, json, signal);
+  let switchedModel = false;
+  for (let fixes = 0; !r.ok && fixes < 3; fixes++) {
+    if (r.status === 400 && thinkingOffSupported && /thinking/i.test(r.msg)) {
+      // this model refuses "thinking off": send requests without it from now on
+      thinkingOffSupported = false;
+    } else if (!switchedModel && isRetiredModel(r.status, r.msg)) {
+      // model retired: switch to the newest working Flash model and remember it
+      model = await findWorkingModel(gem, signal);
       KEYS.set('vv-gem-model', model, KEYS.remembered());
-      res = await generate(model, gem, prompt, json, signal);
-      if (!res.ok) msg = await errorMessage(res);
-    }
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${msg}`);
+      switchedModel = true;
+    } else break;
+    r = await attempt(model, gem, prompt, json, signal);
   }
-  const body = await res.json();
+  if (!r.ok) throw new Error(geminiErrorText(r.status, r.msg));
+  const body = await r.res.json();
   const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '';
   if (!text) throw new Error('Gemini returned nothing. Try again.');
   return json ? JSON.parse(text.replace(/^```json|```$/g, '')) : text.trim();
@@ -170,7 +198,7 @@ export async function generateStory(genre, idea) {
  * keeping only picks that name a real character and a voice from the list.
  */
 export async function recommendVoices(an, voices) {
-  const j = await callGemini(castingPrompt(an, voices), true);
+  const j = await callGemini(castingPrompt(an, voices), true, 45_000);
   const ids = new Set(voices.map((v) => v.id));
   const names = new Set(an.chars.map((c) => c.name));
   const picks = {};

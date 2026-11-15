@@ -47,6 +47,7 @@ export default function Voices() {
 
   const pickVoice = (v, wantsPreview) => {
     cc.voice = v.id;
+    cc.manual = true; // AI casting won't override a voice picked by hand
     voiceChanged();
     commit();
     if (!wantsPreview) return;
@@ -276,7 +277,7 @@ export default function Voices() {
 function AiCastPanel({ aiCast, pick, voice }) {
   if (!hasGemini()) return null;
   const recast = (
-    <button className="btn btn-s btn-sm" onClick={castWithAI} disabled={aiCast.status === 'working'}>
+    <button className="btn btn-s btn-sm" onClick={() => castWithAI({ force: true })} disabled={aiCast.status === 'working'}>
       <Icon name="sparkle" />
       {aiCast.status === 'done' ? 'Recast with AI' : 'Cast with AI'}
     </button>

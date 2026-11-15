@@ -36,11 +36,14 @@ export function useBuild() {
   );
 }
 
+/** True while the pipeline is recording or mixing. */
+export const isBuilding = () => B.running;
+
 export function resetBuild() {
   B = { running: false, step: 0, progress: 0, detail: {}, error: null };
 }
 
-/** Record every line with ElevenLabs, three requests at a time. */
+/** Record every line with ElevenLabs, two at a time (the most a free ElevenLabs plan allows). */
 async function recordVoices(i) {
   const an = S.an;
   const todo = an.lines.map((_, j) => j).filter((j) => !audio.buffers[j]);
@@ -51,12 +54,17 @@ async function recordVoices(i) {
       const j = todo.shift();
       const l = an.lines[j];
       emit({ detail: { voices: `${l.speaker} · line ${done + 1} of ${an.lines.length}` } });
-      audio.buffers[j] = await ctx.decodeAudioData(await ttsEleven(l));
+      try {
+        audio.buffers[j] = await ctx.decodeAudioData(await ttsEleven(l));
+      } catch (e) {
+        todo.length = 0; // stop the other worker too; lines already recorded are kept for "Retry"
+        throw new Error(`Line ${j + 1} (${l.speaker}): ${e.message}`);
+      }
       done++;
       emit({ progress: startOf(i) + (WEIGHTS[i] * done) / an.lines.length });
     }
   };
-  await Promise.all([worker(), worker(), worker()]);
+  await Promise.all([worker(), worker()]);
   emit({ detail: { voices: `${an.lines.length} lines recorded` } });
 }
 

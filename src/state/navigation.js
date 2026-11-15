@@ -6,7 +6,7 @@ import { analyseWithGemini, recommendVoices } from '../ai/gemini';
 import { autoCast, loadElevenVoices, voiceList } from '../ai/voices';
 import { pause, resetPlayback } from '../audio/playback';
 import { resetAudio } from '../audio/mixer';
-import { resetBuild } from './build';
+import { isBuilding, resetBuild } from './build';
 import { sleep } from '../lib/utils';
 
 /** Which steps the user can open right now. */
@@ -83,7 +83,7 @@ export async function analyseStory() {
  * best-fitting voice from the available catalogue, with a one-line reason.
  * The rule-based auto-cast stays in place if Gemini is unavailable or fails.
  */
-export async function castWithAI() {
+export async function castWithAI({ force = false } = {}) {
   const an = S.an;
   const voices = voiceList();
   if (!an || !hasGemini() || !voices.length) return;
@@ -92,11 +92,23 @@ export async function castWithAI() {
   try {
     const picks = await recommendVoices(an, voices);
     if (S.an !== an) return; // a new story was started meanwhile
-    Object.entries(picks).forEach(([name, pick]) => {
-      if (S.cast[name]) S.cast[name].voice = pick.voice;
-    });
-    resetAudio();
-    S.built = false;
+    // Apply the picks only before any audio exists, and never over a voice the user chose by hand.
+    // Otherwise they stay as recommendations (badges) the user can click.
+    if (!isBuilding() && (force || !S.built)) {
+      let changed = false;
+      Object.entries(picks).forEach(([name, pick]) => {
+        const c = S.cast[name];
+        if (c && (force || !c.manual) && c.voice !== pick.voice) {
+          c.manual = false;
+          c.voice = pick.voice;
+          changed = true;
+        }
+      });
+      if (changed) {
+        resetAudio();
+        S.built = false;
+      }
+    }
     S.aiCast = { status: 'done', picks, error: '' };
   } catch (e) {
     if (S.an !== an) return;
