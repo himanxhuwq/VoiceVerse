@@ -151,32 +151,6 @@ export default function Export() {
           )}
         </motion.button>
 
-        <motion.div variants={rise}>
-          <span className="cap">Share a link</span>
-          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <span
-              className="inp mono"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                color: 'var(--mu)',
-                fontSize: 14,
-                flex: 1,
-                minWidth: 0,
-                overflow: 'hidden',
-              }}
-            >
-              <Icon name="link" />
-              Needs hosting, after the MVP
-            </span>
-            <button className="btn btn-s" disabled>
-              <Icon name="copy" />
-              Copy link
-            </button>
-          </div>
-        </motion.div>
-
         <motion.div variants={rise} className="more">
           <motion.button whileHover={{ y: -2 }} className="panel" onClick={copyScript}>
             <Icon name="scroll" />

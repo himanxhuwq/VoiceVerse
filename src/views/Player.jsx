@@ -121,12 +121,9 @@ export default function Player() {
           <span>·</span>
           <span>{an.chars.length} voices</span>
           {engineMode() === 'live' && (
-            <>
-              <span>·</span>
-              <span className="chip" title="Voices play live from this browser">
-                Live browser voices
-              </span>
-            </>
+            <span className="chip" title="Voices play live from this browser">
+              Live browser voices
+            </span>
           )}
         </div>
         <Lyrics lines={an.lines} idx={idx} />

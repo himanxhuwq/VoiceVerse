@@ -1883,3 +1883,52 @@ input[type='range']::-moz-range-thumb {
   opacity: 1;
   transition: none;
 }
+
+/* ---------- design fixes ---------- */
+/* Story: breathing room between the heading and its subtitle */
+.h1 + .hint{margin-top:10px}
+
+/* Grid children may shrink below their content, so wide rows (tabs) scroll instead of widening the page */
+.split>*,.ancols>*,.vs>*,.player>*,.ex>*,.gen-wrap>*{min-width:0}
+.tabs{max-width:100%}
+
+/* Mood pickers on scene cards look like dropdowns */
+select.chip{padding-right:30px;background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+select.chip:hover{border-color:var(--line2)}
+
+/* Timeline: a visible scrollbar shows the board scrolls sideways */
+.scroller{scrollbar-color:var(--line2) transparent}
+.scroller::-webkit-scrollbar{height:10px}
+.scroller::-webkit-scrollbar-track{background:transparent}
+.scroller::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--s1)}
+.b{min-width:10px}
+
+/* Voices: the phone-only "Build the audio" button */
+.mobile-only{display:none}
+
+/* Step bar: drop the labels before the steps run off the edge */
+.steps{min-width:0;flex:0 1 auto}
+@media (max-width:1240px){
+  .steps button span{display:none}
+  .steps button{padding:0 8px}
+}
+
+@media (max-width:1100px){
+  .ctrls{grid-template-columns:1fr 1fr}
+  .ctrls>:last-child{grid-column:1/-1}
+}
+.ctrl .row{gap:12px;flex-wrap:wrap}
+
+@media (max-width:860px){
+  .mobile-only{display:inline-flex;width:100%}
+}
+
+@media (max-width:520px){
+  .top{gap:8px}
+  .steps{gap:2px}
+  .steps button{padding:0 4px}
+  .tabs button{padding:0 12px;font-size:14px}
+  .facts{grid-template-columns:1fr 1fr}
+  .facts>:nth-child(n+3){grid-column:1/-1}
+  .fact .v{font-size:var(--t5)}
+}

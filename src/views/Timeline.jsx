@@ -24,10 +24,16 @@ function edited() {
   commit();
 }
 
+/** Timeline zoom: pixels per second of audio (the board scrolls sideways when it is wider than the screen). */
+const PX_PER_SEC = 26;
+/** Blocks narrower than this show colour only; the full text is in the tooltip and the inspector. */
+const MIN_LABEL_PX = 60;
+
 /** One block on the timeline: grows in from the left, highlights when selected or playing. */
 function Block({ cls, kind, id, start, dur, label, total, bars, current, order }) {
   const selected = S.selBlock && S.selBlock.k === kind && String(S.selBlock.i) === String(id);
   const pc = (x) => (x / total) * 100;
+  const compact = dur * PX_PER_SEC < MIN_LABEL_PX;
   return (
     <motion.button
       className={`b ${cls}${selected ? ' sel' : ''}${current ? ' cur' : ''}`}
@@ -42,8 +48,8 @@ function Block({ cls, kind, id, start, dur, label, total, bars, current, order }
         commit();
       }}
     >
-      <span>{label}</span>
-      {bars && (
+      {!compact && <span>{label}</span>}
+      {bars && !compact && (
         <span className="wv">
           {bars.map((h, i) => (
             <i key={i} style={{ height: Math.round(h * 100) + '%' }} />
@@ -362,7 +368,7 @@ export default function Timeline() {
           ))}
         </div>
         <div className="scroller">
-          <div className="grid" style={{ width: `max(100%, ${Math.max(100, T * 18)}px)` }}>
+          <div className="grid" style={{ width: `max(100%, ${Math.max(100, T * PX_PER_SEC)}px)` }}>
             <div className="ruler">
               {an.scenes.map((s, i) => (
                 <div

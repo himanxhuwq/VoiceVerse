@@ -248,6 +248,18 @@ export default function Voices() {
             <q>{(firstLine?.text || 'This is how I will sound in your story.').slice(0, 160)}</q>
           </div>
         </div>
+
+        {/* On phones the cast sidebar becomes a scroller without its footer, so the next step lives here. */}
+        <button
+          className="btn btn-p btn-l mobile-only"
+          onClick={() => {
+            stopPreview();
+            go('build');
+          }}
+        >
+          Build the audio
+          <Icon name="arrow-right" />
+        </button>
       </motion.div>
     </div>
   );
