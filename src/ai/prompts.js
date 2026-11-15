@@ -1,4 +1,4 @@
-// Prompt templates sent to Gemini. Kept in one place so they can be read,
+// Prompt templates sent to the AI (any provider). Kept in one place so they can be read,
 // reviewed and tuned without touching the app logic.
 import { MOODS, SFX_TYPES } from '../data/constants';
 

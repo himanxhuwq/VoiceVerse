@@ -3,10 +3,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import { GENRE_OPTIONS } from '../data/constants';
 import { SAMPLES } from '../data/samples';
 import { clamp, words } from '../lib/utils';
-import { S, commit, hasGemini, useAppState } from '../state/store';
+import { S, commit, hasAI, useAppState } from '../state/store';
 import { analyseStory, openSettings } from '../state/navigation';
 import { toast } from '../state/toast';
-import { generateStory } from '../ai/gemini';
+import { aiLabel, generateStory } from '../ai/llm';
 import { Icon } from '../components/ui';
 
 /** Longest story the app accepts (longer stories take longer to analyse and record). */
@@ -67,7 +67,7 @@ function UploadTab() {
 function GenerateTab({ busy, setBusy, setError }) {
   const [idea, setIdea] = useState('');
   const generate = async () => {
-    if (!hasGemini()) {
+    if (!hasAI()) {
       const next = SAMPLES[(SAMPLES.findIndex((x) => x.title === S.title) + 1) % SAMPLES.length];
       Object.assign(S, { title: next.title, text: next.text, tab: 'paste' });
       commit();
@@ -95,9 +95,9 @@ function GenerateTab({ busy, setBusy, setError }) {
       />
       <b style={{ color: 'var(--tx)' }}>Generate a fantasy story</b>
       <span>
-        {hasGemini()
-          ? 'Gemini writes a fresh 300–400 word story you can edit.'
-          : 'Without a Gemini key this loads one of the built-in sample stories.'}
+        {hasAI()
+          ? `${aiLabel()} writes a fresh 300–400 word story you can edit.`
+          : 'Without an AI key this loads one of the built-in sample stories.'}
       </span>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
         <input
@@ -270,13 +270,13 @@ export default function Story() {
               ))}
             </div>
           </div>
-          {!hasGemini() && (
+          {!hasAI() && (
             <div className="note">
               <Icon name="info" />
               <span>
                 Demo mode uses the built-in story reader.{' '}
                 <button style={{ textDecoration: 'underline' }} onClick={openSettings}>
-                  Add a Gemini key
+                  Add an AI key
                 </button>{' '}
                 for full AI analysis.
               </span>

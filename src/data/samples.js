@@ -1,4 +1,4 @@
-// Built-in sample stories, used for the demo and when no Gemini key is set.
+// Built-in sample stories, used for the demo and when no AI key is set.
 
 export const SAMPLES = [
   {

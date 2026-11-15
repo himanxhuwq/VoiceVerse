@@ -1,7 +1,7 @@
 // Built-in story reader: a rule-based analyser that runs fully offline.
 // It splits a story into narration and dialogue lines, works out who is
 // speaking, groups paragraphs into scenes, and guesses mood, genre and
-// sound-effect cues. Used in demo mode and as a fallback if Gemini fails.
+// sound-effect cues. Used in demo mode and as a fallback if the AI fails.
 import { clamp, cap1, words } from '../lib/utils';
 
 const VERBS =

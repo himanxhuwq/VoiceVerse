@@ -2114,3 +2114,18 @@ select.chip:hover {
     zoom: 1.25;
   }
 }
+
+/* Settings: two fields side by side */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 520px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
+.modal .panel {
+  width: min(640px, 100%);
+}

@@ -1,8 +1,8 @@
 // Moving between the app's steps, plus the actions that start or reset a story.
-import { S, commit, hasEleven, hasGemini, notify } from './store';
+import { S, commit, hasAI, hasEleven, notify } from './store';
 import { toast } from './toast';
 import { localAnalyse } from '../ai/localReader';
-import { analyseWithGemini, recommendVoices } from '../ai/gemini';
+import { aiLabel, analyseWithAI, recommendVoices } from '../ai/llm';
 import { autoCast, loadElevenVoices, voiceList } from '../ai/voices';
 import { pause, resetPlayback } from '../audio/playback';
 import { resetAudio } from '../audio/mixer';
@@ -36,18 +36,18 @@ export function closeSettings() {
 }
 
 /**
- * Run the story through the AI (Gemini, or the built-in reader without a key),
+ * Run the story through the AI (any supported provider, or the built-in reader without a key),
  * cast the voices and move to the analysis step.
  * Returns an error message to show, or '' on success.
  */
 export async function analyseStory() {
   let warning = '';
   let an;
-  if (hasGemini()) {
+  if (hasAI()) {
     try {
-      an = await analyseWithGemini(S.text, S.title);
+      an = await analyseWithAI(S.text, S.title);
     } catch (e) {
-      warning = 'Gemini failed, so the built-in reader was used instead. (' + e.message + ')';
+      warning = `${aiLabel()} failed, so the built-in reader was used instead. (${e.message})`;
       an = localAnalyse(S.text, S.title);
     }
   } else {
@@ -79,14 +79,14 @@ export async function analyseStory() {
 }
 
 /**
- * Let Gemini cast the story: it reads each character's role and lines and picks the
+ * Let the AI cast the story: it reads each character's role and lines and picks the
  * best-fitting voice from the available catalogue, with a one-line reason.
- * The rule-based auto-cast stays in place if Gemini is unavailable or fails.
+ * The rule-based auto-cast stays in place if the AI is unavailable or fails.
  */
 export async function castWithAI({ force = false } = {}) {
   const an = S.an;
   const voices = voiceList();
-  if (!an || !hasGemini() || !voices.length) return;
+  if (!an || !hasAI() || !voices.length) return;
   S.aiCast = { status: 'working', picks: {}, error: '' };
   notify();
   try {

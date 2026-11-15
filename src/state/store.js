@@ -1,7 +1,8 @@
 // App state: one mutable session object plus a tiny subscribe/notify store,
 // read by React components through useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
-import { DEFAULT_ELEVEN_MODEL, DEFAULT_GEMINI_MODEL } from '../data/constants';
+import { DEFAULT_ELEVEN_MODEL } from '../data/constants';
+import { detectProvider, providerById } from '../ai/providers';
 
 const storage = (() => {
   try {
@@ -92,16 +93,47 @@ export const KEYS = {
     }
   },
   remembered() {
-    return !!storage?.getItem('vv-gem') || !!storage?.getItem('vv-el');
+    return !!storage?.getItem('vv-ai-key') || !!storage?.getItem('vv-el');
   },
 };
 
+/** Keys saved by earlier versions (Gemini only) move to the new any-provider settings. */
+(function migrateOldKeys() {
+  try {
+    const old = KEYS.get('vv-gem');
+    if (old && !KEYS.get('vv-ai-key')) KEYS.set('vv-ai-key', old, !!storage?.getItem('vv-gem'));
+    ['vv-gem', 'vv-gem-model'].forEach((k) => {
+      sessionStorage.removeItem(k);
+      storage?.removeItem(k);
+    });
+  } catch {
+    /* ignore */
+  }
+})();
+
+/**
+ * The AI settings. The provider is chosen in settings or, by default, recognised from the key.
+ * model: '' means "pick automatically from the provider's model list".
+ */
+export function aiConfig() {
+  const key = KEYS.get('vv-ai-key').trim();
+  const choice = KEYS.get('vv-ai-provider') || 'auto';
+  return {
+    key,
+    choice,
+    provider: choice === 'auto' ? detectProvider(key) : providerById(choice),
+    model: KEYS.get('vv-ai-model').trim(),
+    base: KEYS.get('vv-ai-base').trim().replace(/\/+$/, ''),
+  };
+}
+
 export const cfg = () => ({
-  gem: KEYS.get('vv-gem'),
-  gemModel: KEYS.get('vv-gem-model') || DEFAULT_GEMINI_MODEL,
   el: KEYS.get('vv-el'),
   elModel: KEYS.get('vv-el-model') || DEFAULT_ELEVEN_MODEL,
 });
 
-export const hasGemini = () => !!cfg().gem;
+export const hasAI = () => {
+  const a = aiConfig();
+  return !!(a.key && a.provider);
+};
 export const hasEleven = () => !!cfg().el;

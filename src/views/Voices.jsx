@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { EMO } from '../data/constants';
 import { cap1 } from '../lib/utils';
-import { S, commit, hasEleven, hasGemini, useAppState } from '../state/store';
+import { S, commit, hasAI, hasEleven, useAppState } from '../state/store';
+import { aiLabel } from '../ai/llm';
 import { castWithAI, go } from '../state/navigation';
 import { toast } from '../state/toast';
 import { voiceList } from '../ai/voices';
@@ -275,7 +276,7 @@ export default function Voices() {
 
 /** What the AI casting director decided for this character, or that it is still working. */
 function AiCastPanel({ aiCast, pick, voice }) {
-  if (!hasGemini()) return null;
+  if (!hasAI()) return null;
   const recast = (
     <button className="btn btn-s btn-sm" onClick={() => castWithAI({ force: true })} disabled={aiCast.status === 'working'}>
       <Icon name="sparkle" />
@@ -295,7 +296,7 @@ function AiCastPanel({ aiCast, pick, voice }) {
         {aiCast.status === 'working' && (
           <>
             <b>AI is casting your story…</b>
-            <small>Gemini is reading each character's lines to pick the best-fitting voice.</small>
+            <small>{aiLabel()} is reading each character's lines to pick the best-fitting voice.</small>
           </>
         )}
         {aiCast.status === 'done' && pick && (
@@ -319,7 +320,7 @@ function AiCastPanel({ aiCast, pick, voice }) {
         {aiCast.status === 'idle' && (
           <>
             <b>Let AI cast the voices</b>
-            <small>Gemini picks the best voice for each character from their lines.</small>
+            <small>{aiLabel()} picks the best voice for each character from their lines.</small>
           </>
         )}
       </div>

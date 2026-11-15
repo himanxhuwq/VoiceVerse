@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { STEPS } from '../data/constants';
-import { hasEleven, hasGemini, useAppState } from '../state/store';
+import { hasAI, hasEleven, useAppState } from '../state/store';
+import { aiLabel } from '../ai/llm';
 import { go, openSettings, reachable } from '../state/navigation';
 import { usePlayback } from '../audio/playback';
 import { Icon } from './ui';
@@ -28,8 +29,8 @@ export default function TopBar() {
   const S = useAppState();
   const current = STEPS.findIndex(([k]) => k === S.view);
   const can = reachable();
-  const live = hasGemini() || hasEleven();
-  const modeText = live ? [hasGemini() && 'Gemini', hasEleven() && 'ElevenLabs'].filter(Boolean).join(' + ') : 'Demo mode';
+  const live = hasAI() || hasEleven();
+  const modeText = live ? [hasAI() && aiLabel(), hasEleven() && 'ElevenLabs'].filter(Boolean).join(' + ') : 'Demo mode';
 
   return (
     <header className="top">
