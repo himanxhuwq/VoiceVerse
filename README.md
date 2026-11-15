@@ -8,6 +8,32 @@ Built by **Team Byte Busters** for the **GeNarrative** hackathon.
 
 ![Home screen](docs/screens/01-home.png)
 
+## The problem
+
+Writers, storytellers, podcasters and audiobook creators increasingly want their stories to be *heard*, not just read. But turning a written story into a good audio drama is slow, expensive and technical:
+
+- **It needs a whole crew.** A narrator, a separate voice for every character, a composer or music library, a sound designer and an audio editor.
+- **It needs skills most writers don't have.** Casting voices, timing dialogue, choosing music that fits each scene's mood, placing sound effects, and mixing it all so the voices stay clear.
+- **It takes days, even for a few minutes of audio.** That puts audio storytelling out of reach for independent creators, students and small teams.
+- **Plain text-to-speech isn't enough.** It reads a story in one flat voice, with no characters, no emotion, no music and no atmosphere.
+
+## Our solution
+
+**VoiceVerse turns any written story into a cinematic, multi-voice audio experience in minutes, with no audio skills needed.** The writer pastes a story and the AI does the work of the whole production crew:
+
+| Production job | How VoiceVerse does it |
+|---|---|
+| **Script editor** | Gemini reads the story, splits it into scenes, and tags every line with its speaker and emotion |
+| **Casting director** | Each character is matched to a distinct voice by gender, age and role; the narrator gets a narration voice |
+| **Voice actors** | ElevenLabs performs every line with emotion-aware settings (afraid, whispering, joyful…) |
+| **Composer** | Each scene gets a music bed that fits its mood (calm, tense, mysterious, epic…) |
+| **Sound designer** | Sound effects the story mentions (rain, thunder, doors, footsteps, magic…) are placed on the right line |
+| **Audio editor** | Everything is mixed with the music ducking under voices, then exported as MP3 or WAV |
+
+The writer stays in control: they can rename characters, change any scene's mood, swap voices, tune speed, tone and emotion, and move, change or remove sound effects on a multi-track timeline before downloading.
+
+It also works with **no API keys at all**. A built-in offline story reader and the browser's own voices keep the full flow working for anyone, anywhere.
+
 ## Try it
 
 **Live demo:** https://himanxhuwq.github.io/VoiceVerse/
