@@ -64,7 +64,7 @@ Then open http://localhost:5173. No keys are needed: without them VoiceVerse run
 ```mermaid
 flowchart LR
   A[Story text] --> B{Gemini key?}
-  B -- yes --> C[Gemini 2.5 Flash<br/>structured JSON analysis]
+  B -- yes --> C[Gemini Flash<br/>structured JSON analysis]
   B -- no --> D[Built-in reader<br/>rule-based NLP]
   C --> E[Scenes · lines · characters<br/>moods · SFX cues]
   D --> E
@@ -103,7 +103,7 @@ All music and sound effects are **synthesised in the browser with the Web Audio 
 |---|---|
 | UI | React 18 + Vite |
 | Animation | Motion (Framer Motion): page transitions, staggered reveals, shared-layout highlights, animated progress and waveforms |
-| Story AI | Google Gemini 2.5 Flash (structured JSON output) |
+| Story AI | Google Gemini Flash (structured JSON output; automatically switches to the newest Flash model if one is retired) |
 | Voices | ElevenLabs Text-to-Speech, or the browser's Web Speech API |
 | Music & SFX | Web Audio API (procedural synthesis) |
 | Mixing | OfflineAudioContext with ducking and compression |

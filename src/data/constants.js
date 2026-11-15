@@ -92,5 +92,6 @@ export const SCENE_GAP = 1.4;
 
 export const GENRE_OPTIONS = ['auto', 'Fantasy', 'Adventure', 'Mystery', 'Sci-fi', 'Horror', 'Fairy tale', 'Drama'];
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+// Google's rolling alias for its current Flash model; if it ever stops working the app finds a replacement itself.
+export const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest';
 export const DEFAULT_ELEVEN_MODEL = 'eleven_multilingual_v2';

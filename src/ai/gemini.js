@@ -1,17 +1,38 @@
 // Google Gemini client: story analysis and story generation.
 import { MOODS, SFX_TYPES } from '../data/constants';
 import { cap1, clamp } from '../lib/utils';
-import { cfg } from '../state/store';
+import { KEYS, cfg } from '../state/store';
 import { analysisPrompt, castingPrompt, storyPrompt } from './prompts';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-/** Send one prompt to Gemini. With json=true the reply is parsed as JSON. */
-export async function callGemini(prompt, json = true) {
-  const { gem, gemModel } = cfg();
-  const res = await fetch(`${ENDPOINT}/${encodeURIComponent(gemModel)}:generateContent`, {
+/** Google retires model versions over time; these errors mean "this model name no longer works". */
+const isRetiredModel = (status, msg) =>
+  status === 404 || /no longer available|not found|deprecated|not supported/i.test(msg || '');
+
+/**
+ * Find the newest stable Flash model this API key can use, from Google's own model list.
+ * Prefers stable over preview/experimental, full Flash over Flash-Lite, then the highest version.
+ */
+export async function findWorkingModel(key) {
+  const res = await fetch(`${ENDPOINT}?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
+  if (!res.ok) throw new Error(`Gemini ${res.status}: could not list models`);
+  const models = ((await res.json()).models || [])
+    .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m) => m.name.replace(/^models\//, ''))
+    .filter((n) => /^gemini-.*flash/.test(n) && !/image|tts|audio|live|embed|vision|thinking/.test(n));
+  const version = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+  const score = (n) =>
+    (/preview|exp/.test(n) ? 0 : 1000) + (/lite/.test(n) ? 0 : 100) + version(n) * 10 + (/latest/.test(n) ? 0 : 1);
+  models.sort((a, b) => score(b) - score(a));
+  if (!models.length) throw new Error('No Gemini Flash model is available for this key.');
+  return models[0];
+}
+
+async function generate(model, key, prompt, json) {
+  return fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': gem },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
@@ -20,14 +41,33 @@ export async function callGemini(prompt, json = true) {
       },
     }),
   });
+}
+
+async function errorMessage(res) {
+  try {
+    return (await res.json()).error?.message || res.statusText;
+  } catch {
+    return res.statusText;
+  }
+}
+
+/**
+ * Send one prompt to Gemini. With json=true the reply is parsed as JSON.
+ * If the chosen model has been retired, it switches to the newest available Flash model,
+ * remembers it, and retries once.
+ */
+export async function callGemini(prompt, json = true) {
+  const { gem, gemModel } = cfg();
+  let res = await generate(gemModel, gem, prompt, json);
   if (!res.ok) {
-    let msg = '';
-    try {
-      msg = (await res.json()).error?.message;
-    } catch {
-      /* no JSON body */
+    let msg = await errorMessage(res);
+    if (isRetiredModel(res.status, msg)) {
+      const model = await findWorkingModel(gem);
+      KEYS.set('vv-gem-model', model, KEYS.remembered());
+      res = await generate(model, gem, prompt, json);
+      if (!res.ok) msg = await errorMessage(res);
     }
-    throw new Error(`Gemini ${res.status}: ${msg || res.statusText}`);
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${msg}`);
   }
   const body = await res.json();
   const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '';
