@@ -2,7 +2,7 @@
 import { MOODS, SFX_TYPES } from '../data/constants';
 import { cap1, clamp } from '../lib/utils';
 import { cfg } from '../state/store';
-import { analysisPrompt, storyPrompt } from './prompts';
+import { analysisPrompt, castingPrompt, storyPrompt } from './prompts';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -106,4 +106,20 @@ export async function generateStory(genre, idea) {
       .trim(),
     text: parts.slice(1).join('\n\n').trim(),
   };
+}
+
+/**
+ * Ask Gemini to cast the story: returns { [characterName]: { voice, reason } },
+ * keeping only picks that name a real character and a voice from the list.
+ */
+export async function recommendVoices(an, voices) {
+  const j = await callGemini(castingPrompt(an, voices), true);
+  const ids = new Set(voices.map((v) => v.id));
+  const names = new Set(an.chars.map((c) => c.name));
+  const picks = {};
+  (j.casting || []).forEach((p) => {
+    if (names.has(p?.character) && ids.has(p?.voice_id)) picks[p.character] = { voice: p.voice_id, reason: p.reason || '' };
+  });
+  if (!Object.keys(picks).length) throw new Error('Gemini did not return a usable cast.');
+  return picks;
 }

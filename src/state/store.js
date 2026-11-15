@@ -17,6 +17,9 @@ const storage = (() => {
  * The working session.
  * an    = the story analysis: { title, genre, style, arc, scenes[], chars[], lines[], engine }
  * cast  = voice settings per character name: { voice, speed, tone, emotion }
+ * aiCast = AI voice recommendations: { status: 'idle'|'working'|'done'|'error', picks: { [name]: { voice, reason } }, error }
+ *
+ * Only API keys are kept between visits (see KEYS); the story itself resets on refresh.
  */
 export const S = {
   view: 'home',
@@ -32,6 +35,7 @@ export const S = {
   fmt: 'mp3',
   selBlock: null,
   settingsOpen: false,
+  aiCast: { status: 'idle', picks: {}, error: '' },
 };
 
 let version = 0;
@@ -54,32 +58,18 @@ export function useAppState() {
   return S;
 }
 
-const PERSISTED = ['view', 'title', 'text', 'lang', 'genreHint', 'an', 'cast', 'sel', 'fmt'];
-
-export function save() {
-  if (!storage) return;
-  try {
-    const snapshot = Object.fromEntries(PERSISTED.map((k) => [k, S[k]]));
-    storage.setItem('vv-state', JSON.stringify(snapshot));
-  } catch {
-    /* storage full or blocked: the session still works, it just won't persist */
-  }
-}
-
-/** Save and re-render. Call after any change to S. */
+/** Re-render after any change to S. The story lives in memory only, so a page refresh starts fresh. */
 export function commit() {
-  save();
   notify();
 }
 
-export function load() {
+/** Remove the story saved by earlier versions of the app (they kept it across refreshes). */
+export function clearSavedStory() {
   try {
-    const saved = JSON.parse(storage?.getItem('vv-state') || 'null');
-    if (saved) Object.assign(S, saved);
+    storage?.removeItem('vv-state');
   } catch {
-    /* ignore a corrupt save */
+    /* ignore */
   }
-  S.view = 'home'; // always open on the home page; a saved story can be resumed from there
 }
 
 /* ---------- API keys (kept in this browser only) ---------- */

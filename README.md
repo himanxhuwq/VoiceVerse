@@ -24,7 +24,7 @@ Writers, storytellers, podcasters and audiobook creators increasingly want their
 | Production job | How VoiceVerse does it |
 |---|---|
 | **Script editor** | Gemini reads the story, splits it into scenes, and tags every line with its speaker and emotion |
-| **Casting director** | Each character is matched to a distinct voice by gender, age and role; the narrator gets a narration voice |
+| **Casting director** | Gemini reads each character's lines and recommends the best-fitting voice from the catalogue, explaining why |
 | **Voice actors** | ElevenLabs performs every line with emotion-aware settings (afraid, whispering, joyful…) |
 | **Composer** | Each scene gets a music bed that fits its mood (calm, tense, mysterious, epic…) |
 | **Sound designer** | Sound effects the story mentions (rain, thunder, doors, footsteps, magic…) are placed on the right line |
@@ -53,7 +53,7 @@ Then open http://localhost:5173. No keys are needed: without them VoiceVerse run
 |---|---|
 | **1. Story** | Paste text, upload a `.txt`, or have Gemini write a story from an idea |
 | **2. Analysis** | AI splits the story into scenes and speaker-tagged lines, finds characters (gender, age), mood per scene, genre, narration style and sound cues |
-| **3. Voices** | Each character is auto-cast to a fitting voice; tune speed, tone and emotion, and preview any line |
+| **3. Voices** | Gemini recommends the best voice for each character from their lines, with a reason; tune speed, tone and emotion, and preview any line |
 | **4. Build** | Lines are recorded with ElevenLabs (3 in parallel), music is scored per mood, effects are placed, everything is mixed |
 | **5. Timeline** | Multi-track editor: narration, dialogue, music and effects. Change a scene's music, swap, move, re-level or remove effects, reassign a line's speaker |
 | **6. Listen** | Player with live lyrics, scene chapters, seekable waveform and "who's speaking" cast |
@@ -88,7 +88,8 @@ flowchart LR
 
 - **Story analysis (Gemini).** One structured-output call (`responseMimeType: application/json`) returns the whole breakdown: characters with gender and age, 2–5 scenes with a mood from a fixed list, every line of the story in order tagged with its speaker and an emotion, and sound-effect cues anchored to the line where they happen. The reply is validated and normalised (unknown speakers fall back to the narrator, cue indexes are clamped). All prompts live in [`src/ai/prompts.js`](src/ai/prompts.js).
 - **Story generation (Gemini).** Writes an original 300–380-word story shaped for audio drama: named characters, quoted dialogue with clear tags, and sounds a listener can hear.
-- **Voice casting.** Characters are matched to voices by gender, age (elder, young) and role (an ElevenLabs "narration" voice for the narrator); spirits get a slower, deeper whisper.
+- **AI voice casting (Gemini).** After analysis, Gemini acts as casting director: it reads each character's role and their own lines, compares them with the full voice catalogue (gender, age, accent, description), and picks the best-fitting voice for every character with a one-line reason, shown in the app as an "AI pick". Prompt: `castingPrompt` in [`src/ai/prompts.js`](src/ai/prompts.js).
+- **Rule-based casting fallback.** Without Gemini, characters are matched to voices by gender, age (elder, young) and role (an ElevenLabs "narration" voice for the narrator); spirits get a slower, deeper whisper.
 - **Emotional speech (ElevenLabs).** Each line's emotion maps to ElevenLabs `stability` and `style` settings (or rate, pitch and volume for browser voices), so an *afraid* line sounds different from a *calm* one.
 - **Offline fallback.** If Gemini is unavailable, a rule-based reader ([`src/ai/localReader.js`](src/ai/localReader.js)) attributes dialogue from speech verbs and pronouns, infers gender and age, splits scenes at time words, and scores mood, genre and sound cues from keywords, so the demo never breaks.
 

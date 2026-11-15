@@ -2,8 +2,8 @@
 import { S, commit, hasEleven, hasGemini, notify } from './store';
 import { toast } from './toast';
 import { localAnalyse } from '../ai/localReader';
-import { analyseWithGemini } from '../ai/gemini';
-import { autoCast, loadElevenVoices } from '../ai/voices';
+import { analyseWithGemini, recommendVoices } from '../ai/gemini';
+import { autoCast, loadElevenVoices, voiceList } from '../ai/voices';
 import { pause, resetPlayback } from '../audio/playback';
 import { resetAudio } from '../audio/mixer';
 import { resetBuild } from './build';
@@ -69,11 +69,40 @@ export async function analyseStory() {
       warning = e.message;
     }
   }
+  S.aiCast = { status: 'idle', picks: {}, error: '' };
   autoCast(an);
   S.sel = an.chars[1]?.name || 'Narrator';
   go('analysis');
   if (warning) toast(warning.slice(0, 120));
+  castWithAI(); // runs in the background while the user reads the analysis
   return warning;
+}
+
+/**
+ * Let Gemini cast the story: it reads each character's role and lines and picks the
+ * best-fitting voice from the available catalogue, with a one-line reason.
+ * The rule-based auto-cast stays in place if Gemini is unavailable or fails.
+ */
+export async function castWithAI() {
+  const an = S.an;
+  const voices = voiceList();
+  if (!an || !hasGemini() || !voices.length) return;
+  S.aiCast = { status: 'working', picks: {}, error: '' };
+  notify();
+  try {
+    const picks = await recommendVoices(an, voices);
+    if (S.an !== an) return; // a new story was started meanwhile
+    Object.entries(picks).forEach(([name, pick]) => {
+      if (S.cast[name]) S.cast[name].voice = pick.voice;
+    });
+    resetAudio();
+    S.built = false;
+    S.aiCast = { status: 'done', picks, error: '' };
+  } catch (e) {
+    if (S.an !== an) return;
+    S.aiCast = { status: 'error', picks: {}, error: e.message };
+  }
+  notify();
 }
 
 /** Throw the current story away and start again. */
@@ -85,6 +114,7 @@ export function newStory() {
   S.built = false;
   S.cast = {};
   S.selBlock = null;
+  S.aiCast = { status: 'idle', picks: {}, error: '' };
   resetAudio();
   resetBuild();
   go('story');

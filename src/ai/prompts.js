@@ -22,3 +22,39 @@ ${text}`;
 export function storyPrompt(genre, idea) {
   return `Write an original ${genre} story for an audio drama, 300 to 380 words. ${idea ? 'Idea: ' + idea + '.' : ''} Use 2 or 3 named characters, put all dialogue in straight double quotes with clear tags like "said Mira", include sounds a listener can hear (rain, doors, footsteps, wind, birds, fire, bells, magic), and end warmly. Return the title on the first line, then a blank line, then the story. No markdown.`;
 }
+
+/**
+ * Voice casting: given the characters (with their own lines) and the voice catalogue,
+ * pick the best-fitting voice for each character and say why.
+ */
+export function castingPrompt(an, voices) {
+  const characters = an.chars.map((c) => ({
+    name: c.name,
+    role: c.role,
+    gender: c.gender,
+    age: c.age,
+    sample_lines: an.lines
+      .filter((l) => l.speaker === c.name)
+      .slice(0, 3)
+      .map((l) => l.text.slice(0, 160)),
+  }));
+  const catalogue = voices.map((v) => ({
+    id: v.id,
+    name: v.name,
+    gender: v.gender,
+    age: v.age || '',
+    about: [v.desc, v.use].filter(Boolean).join(' · '),
+  }));
+  return `You are the casting director for an audio drama.
+Story: "${an.title}" (${an.genre}). Narration style: ${an.style}.
+
+Pick the single best voice for every character from the catalogue. Match gender and age first, then personality, accent and the feel of their lines; the Narrator needs a clear, warm storytelling voice that suits the genre. Give each character a different voice when the catalogue allows it.
+
+Return ONLY JSON: {"casting":[{"character":string,"voice_id":string (an id from the catalogue),"reason":string (max 14 words, why this voice fits)}]}
+
+CHARACTERS:
+${JSON.stringify(characters)}
+
+VOICE CATALOGUE:
+${JSON.stringify(catalogue)}`;
+}

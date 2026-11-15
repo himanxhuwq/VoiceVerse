@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { EMO } from '../data/constants';
 import { cap1 } from '../lib/utils';
-import { S, commit, hasEleven, save, useAppState } from '../state/store';
-import { go } from '../state/navigation';
+import { S, commit, hasEleven, hasGemini, useAppState } from '../state/store';
+import { castWithAI, go } from '../state/navigation';
 import { toast } from '../state/toast';
 import { voiceList } from '../ai/voices';
 import { playPreviewUrl, previewLine, stopPreview } from '../ai/tts';
@@ -17,11 +17,10 @@ const toneLabel = (t) => (t < 35 ? 'Deep' : t > 65 ? 'Bright' : 'Natural');
 function voiceChanged() {
   resetAudio();
   S.built = false;
-  save();
 }
 
 export default function Voices() {
-  const { an, cast, sel: selected } = useAppState();
+  const { an, cast, sel: selected, aiCast } = useAppState();
   const [previewing, setPreviewing] = useState(null); // id of the button whose preview is playing
   const [, force] = useState(0);
   useEffect(() => () => stopPreview(), []);
@@ -138,6 +137,8 @@ export default function Voices() {
           </span>
         </div>
 
+        <AiCastPanel aiCast={aiCast} pick={aiCast.picks[sel]} voice={list.find((v) => v.id === aiCast.picks[sel]?.voice)} />
+
         {!list.length && (
           <div className="note">
             <Icon name="info" />
@@ -164,6 +165,12 @@ export default function Voices() {
                 <span className="play" role="button" aria-label={`Preview ${v.name}`}>
                   <Icon name={previewing === v.id ? 'pause' : 'play'} fill />
                 </span>
+                {aiCast.picks[sel]?.voice === v.id && (
+                  <span className="ai-badge" title={aiCast.picks[sel].reason}>
+                    <Icon name="sparkle" fill />
+                    AI pick
+                  </span>
+                )}
                 <div style={{ minWidth: 0 }}>
                   <b>{v.name}</b>
                   <small>{[v.gender !== 'unknown' ? cap1(v.gender) : '', v.desc].filter(Boolean).join(' · ')}</small>
@@ -262,5 +269,60 @@ export default function Voices() {
         </button>
       </motion.div>
     </div>
+  );
+}
+
+/** What the AI casting director decided for this character, or that it is still working. */
+function AiCastPanel({ aiCast, pick, voice }) {
+  if (!hasGemini()) return null;
+  const recast = (
+    <button className="btn btn-s btn-sm" onClick={castWithAI} disabled={aiCast.status === 'working'}>
+      <Icon name="sparkle" />
+      {aiCast.status === 'done' ? 'Recast with AI' : 'Cast with AI'}
+    </button>
+  );
+  return (
+    <motion.div className="panel ai-cast" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <span className="ai-ic">
+        <Icon
+          name={aiCast.status === 'working' ? 'circle-notch' : 'sparkle'}
+          fill={aiCast.status !== 'working'}
+          spin={aiCast.status === 'working'}
+        />
+      </span>
+      <div style={{ minWidth: 0 }}>
+        {aiCast.status === 'working' && (
+          <>
+            <b>AI is casting your story…</b>
+            <small>Gemini is reading each character's lines to pick the best-fitting voice.</small>
+          </>
+        )}
+        {aiCast.status === 'done' && pick && (
+          <>
+            <b>AI recommends {voice?.name.split(' - ')[0] || 'this voice'}</b>
+            <small>{pick.reason}</small>
+          </>
+        )}
+        {aiCast.status === 'done' && !pick && (
+          <>
+            <b>No AI pick for this character</b>
+            <small>The rule-based casting is used instead.</small>
+          </>
+        )}
+        {aiCast.status === 'error' && (
+          <>
+            <b>AI casting failed</b>
+            <small>{aiCast.error}</small>
+          </>
+        )}
+        {aiCast.status === 'idle' && (
+          <>
+            <b>Let AI cast the voices</b>
+            <small>Gemini picks the best voice for each character from their lines.</small>
+          </>
+        )}
+      </div>
+      {aiCast.status !== 'working' && recast}
+    </motion.div>
   );
 }
