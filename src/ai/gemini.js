@@ -6,6 +6,9 @@ import { analysisPrompt, castingPrompt, storyPrompt } from './prompts';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+/** Give up on a Gemini call after this long, so a slow or stuck request can never freeze the app. */
+export const GEMINI_TIMEOUT_MS = 90_000;
+
 /** Google retires model versions over time; these errors mean "this model name no longer works". */
 const isRetiredModel = (status, msg) =>
   status === 404 || /no longer available|not found|deprecated|not supported/i.test(msg || '');
@@ -14,8 +17,8 @@ const isRetiredModel = (status, msg) =>
  * Find the newest stable Flash model this API key can use, from Google's own model list.
  * Prefers stable over preview/experimental, full Flash over Flash-Lite, then the highest version.
  */
-export async function findWorkingModel(key) {
-  const res = await fetch(`${ENDPOINT}?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
+export async function findWorkingModel(key, signal) {
+  const res = await fetch(`${ENDPOINT}?pageSize=1000`, { headers: { 'x-goog-api-key': key }, signal });
   if (!res.ok) throw new Error(`Gemini ${res.status}: could not list models`);
   const models = ((await res.json()).models || [])
     .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
@@ -29,9 +32,10 @@ export async function findWorkingModel(key) {
   return models[0];
 }
 
-async function generate(model, key, prompt, json) {
+async function generate(model, key, prompt, json, signal) {
   return fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -54,17 +58,30 @@ async function errorMessage(res) {
 /**
  * Send one prompt to Gemini. With json=true the reply is parsed as JSON.
  * If the chosen model has been retired, it switches to the newest available Flash model,
- * remembers it, and retries once.
+ * remembers it, and retries once. The whole call is cut off after GEMINI_TIMEOUT_MS.
  */
 export async function callGemini(prompt, json = true) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
+  try {
+    return await request(prompt, json, ctrl.signal);
+  } catch (e) {
+    if (ctrl.signal.aborted) throw new Error(`Gemini took longer than ${GEMINI_TIMEOUT_MS / 1000} seconds`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function request(prompt, json, signal) {
   const { gem, gemModel } = cfg();
-  let res = await generate(gemModel, gem, prompt, json);
+  let res = await generate(gemModel, gem, prompt, json, signal);
   if (!res.ok) {
     let msg = await errorMessage(res);
     if (isRetiredModel(res.status, msg)) {
-      const model = await findWorkingModel(gem);
+      const model = await findWorkingModel(gem, signal);
       KEYS.set('vv-gem-model', model, KEYS.remembered());
-      res = await generate(model, gem, prompt, json);
+      res = await generate(model, gem, prompt, json, signal);
       if (!res.ok) msg = await errorMessage(res);
     }
     if (!res.ok) throw new Error(`Gemini ${res.status}: ${msg}`);

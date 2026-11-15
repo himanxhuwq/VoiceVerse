@@ -47,7 +47,10 @@ export const resetElevenVoices = () => {
 
 export async function loadElevenVoices() {
   if (elevenVoices) return elevenVoices;
-  const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': cfg().el } });
+  const res = await fetch('https://api.elevenlabs.io/v1/voices', {
+    headers: { 'xi-api-key': cfg().el },
+    signal: AbortSignal.timeout(20_000),
+  });
   if (!res.ok) {
     let msg = '';
     try {

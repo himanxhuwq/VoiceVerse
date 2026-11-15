@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { GENRE_OPTIONS } from '../data/constants';
 import { SAMPLES } from '../data/samples';
@@ -128,6 +128,13 @@ function GenerateTab({ busy, setBusy, setError }) {
 export default function Story() {
   const state = useAppState();
   const [busy, setBusy] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  // Count the seconds while the AI works, so a long analysis visibly isn't frozen.
+  useEffect(() => {
+    if (!busy) return setSeconds(0);
+    const t = setInterval(() => setSeconds((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
   const [error, setError] = useState('');
   const w = words(state.text);
   const meterClass = w > MAX_WORDS ? 'bad' : w > MAX_WORDS * 0.85 ? 'warn' : '';
@@ -299,7 +306,7 @@ export default function Story() {
             {busy ? (
               <>
                 <Icon name="circle-notch" spin />
-                Reading your story…
+                Reading your story… {seconds > 2 ? `${seconds}s` : ''}
               </>
             ) : (
               <>
