@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { MotionConfig } from 'motion/react';
 import { STEPS } from './data/constants';
 import { useAppState } from './state/store';
 import { closeSettings } from './state/navigation';
@@ -59,18 +59,12 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <TopBar />
       <main id="main">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={view}
-            className="view"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.28, ease: [0.2, 0.7, 0.2, 1] }}
-          >
-            <View />
-          </motion.div>
-        </AnimatePresence>
+        {/* The new screen replaces the old one at once and only slides in (CSS .view-in).
+            It never waits on an exit animation and never starts invisible, so a paused
+            animation (window covered, background tab, screen recording) can't leave it blank. */}
+        <div key={view} className="view view-in">
+          <View />
+        </div>
       </main>
       <Toast />
       <SettingsModal />

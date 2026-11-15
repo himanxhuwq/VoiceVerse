@@ -4,6 +4,9 @@ import App from './App';
 import { clearSavedStory, hasEleven, notify } from './state/store';
 import { loadElevenVoices } from './ai/voices';
 import './styles/global.css';
+import { startAnimationGuard } from './lib/animationGuard';
+
+startAnimationGuard();
 
 // Every visit starts with a fresh story (only API keys are remembered).
 clearSavedStory();

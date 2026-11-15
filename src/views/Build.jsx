@@ -72,31 +72,20 @@ export default function Build() {
 
       <div>
         <span className="cap">Building your audio story</span>
-        <AnimatePresence mode="wait">
-          <motion.h1
-            key={title}
-            className="disp h1"
-            style={{ margin: '12px 0 32px' }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {title}
-          </motion.h1>
-        </AnimatePresence>
+        {/* Plain CSS slide-ins: content is visible from the first frame even if animations are paused. */}
+        <h1 key={title} className="disp h1 view-in" style={{ margin: '12px 0 32px' }}>
+          {title}
+        </h1>
 
         <div>
           {BUILD_STEPS.map((step, i) => {
             const st = stepState(i, b);
             const icon = st === 'done' ? 'check' : st === 'fail' ? 'x' : step.icon;
             return (
-              <motion.div
+              <div
                 key={step.key}
-                className={`pstep ${st}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: st === 'wait' ? 0.55 : 1, x: 0 }}
-                transition={{ delay: i * 0.08 }}
+                className={`pstep ${st} step-in`}
+                style={{ animationDelay: `${i * 0.08}s`, opacity: st === 'wait' ? 0.55 : 1 }}
               >
                 <span className="ic">
                   <motion.i
@@ -112,7 +101,7 @@ export default function Build() {
                   <small>{b.detail[step.key] || ''}</small>
                 </div>
                 <span className="st">{st === 'done' ? 'Done' : st === 'fail' ? 'Failed' : st === 'now' ? 'Working' : '—'}</span>
-              </motion.div>
+              </div>
             );
           })}
         </div>

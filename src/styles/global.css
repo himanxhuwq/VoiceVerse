@@ -2129,3 +2129,44 @@ select.chip:hover {
 .modal .panel {
   width: min(640px, 100%);
 }
+
+/* Screen change: slide only (content is visible from the first frame, even if animations are paused) */
+.view-in {
+  animation: viewIn 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes viewIn {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-in {
+    animation: none;
+  }
+}
+.step-in {
+  animation: stepIn 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+@keyframes stepIn {
+  from {
+    transform: translateX(20px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .step-in {
+    animation: none;
+  }
+}
+/* set by the animation guard when the browser's animation clock is paused */
+.no-anim *,
+.no-anim *::before,
+.no-anim *::after {
+  animation: none !important;
+  transition: none !important;
+}
