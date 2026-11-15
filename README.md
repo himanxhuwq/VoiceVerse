@@ -47,6 +47,15 @@ npm run dev
 
 Then open http://localhost:5173. No keys are needed: without them VoiceVerse runs in **demo mode** with the built-in story reader and your browser's voices. For the full AI pipeline, click **Demo mode → AI keys** and paste an API key from **any supported AI provider** (it is recognised automatically) plus, optionally, an [ElevenLabs](https://elevenlabs.io) key for recorded voices. Keys stay in your browser and are sent only to the provider you chose and to ElevenLabs.
 
+### Hindi and Bengali stories
+
+VoiceVerse works with stories in **English, Hindi (हिन्दी) and Bengali (বাংলা)**. The language is detected automatically from the story's script (or chosen on the Story step), and everything follows it:
+
+- **Story analysis** keeps every line in its own language and script. The built-in reader understands Hindi and Bengali dialogue tags (मीरा ने कहा, টুনি বলল) and family words for gender (काका, ঠাকুমা), and places sound effects from Hindi and Bengali words (बारिश, ঝড়).
+- **Voices** come from the story's language: the browser's Hindi or Bengali voices in demo mode (for example Lekha and Piya on a Mac), with each character given a different pitch when they share a voice. With ElevenLabs, Hindi uses your chosen model and Bengali uses Eleven v3.
+- **The AI** (any provider) is told the language, so analysis, story writing and voice casting stay in Hindi or Bengali.
+- **Demo mode** includes a Hindi and a Bengali sample story: choose the language, open **Generate a story**, and click the button.
+
 ### Supported AI providers
 
 | Provider | Key looks like | Model |

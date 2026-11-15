@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { SCENE_GAP } from '../data/constants';
 import { cap1, clamp, fmtT, pad2 } from '../lib/utils';
-import { useAppState } from '../state/store';
+import { currentLang, useAppState } from '../state/store';
 import { go } from '../state/navigation';
 import { audio, estimatedPeaks, layout, peaks } from '../audio/mixer';
 import { engineMode, seek, toggle, usePlayback } from '../audio/playback';
@@ -61,7 +61,9 @@ function Lyrics({ lines, idx }) {
               exit={{ opacity: 0, y: -24 }}
               transition={{ type: 'spring', stiffness: 260, damping: 30 }}
             >
-              <span className="spk">{lines[k].speaker}</span>
+              <span className="spk" lang={currentLang()}>
+                {lines[k].speaker}
+              </span>
               {lines[k].text}
             </motion.p>
           ) : (

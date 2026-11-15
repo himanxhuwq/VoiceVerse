@@ -2,6 +2,7 @@
 // read by React components through useSyncExternalStore.
 import { useSyncExternalStore } from 'react';
 import { DEFAULT_ELEVEN_MODEL } from '../data/constants';
+import { detectLanguage } from '../lib/language';
 import { detectProvider, providerById } from '../ai/providers';
 
 const storage = (() => {
@@ -26,7 +27,7 @@ export const S = {
   view: 'home',
   title: '',
   text: '',
-  lang: 'en',
+  lang: 'auto', // 'auto' = detect from the story's script, or a language code
   genreHint: 'auto',
   tab: 'paste',
   an: null,
@@ -137,3 +138,8 @@ export const hasAI = () => {
   return !!(a.key && a.provider);
 };
 export const hasEleven = () => !!cfg().el;
+
+/** The story's language: chosen on the Story step, or detected from its script. */
+export const storyLang = () => (S.lang === 'auto' ? detectLanguage(S.text) : S.lang);
+/** Language of the analysed story (what voices and audio should use). */
+export const currentLang = () => S.an?.lang || storyLang();

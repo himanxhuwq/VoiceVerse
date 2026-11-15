@@ -119,8 +119,8 @@ export async function callAI(prompt, json = true, timeoutMs = AI_TIMEOUT_MS) {
 }
 
 /** Analyse a story with the AI and normalise the reply into the app's analysis shape. */
-export async function analyseWithAI(text, title) {
-  const j = await callAI(analysisPrompt(text, title), true);
+export async function analyseWithAI(text, title, lang = 'en') {
+  const j = await callAI(analysisPrompt(text, title, lang), true);
 
   const chars = [{ name: 'Narrator', role: 'Tells the story', gender: 'male', age: 'adult', eerie: false }];
   (j.characters || []).forEach((c) => {
@@ -175,12 +175,13 @@ export async function analyseWithAI(text, title) {
     chars,
     lines,
     engine: aiLabel(),
+    lang,
   };
 }
 
 /** Write a fresh story. Returns { title, text }. */
-export async function generateStory(genre, idea) {
-  const reply = await callAI(storyPrompt(genre, idea), false);
+export async function generateStory(genre, idea, lang = 'en') {
+  const reply = await callAI(storyPrompt(genre, idea, lang), false);
   const parts = reply.replace(/\*\*/g, '').split(/\n\s*\n/);
   return {
     title: parts[0]

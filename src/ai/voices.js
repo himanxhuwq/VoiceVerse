@@ -3,30 +3,37 @@
 // plus a line's emotion into speech parameters.
 import { EMO } from '../data/constants';
 import { clamp, words } from '../lib/utils';
-import { S, cfg, hasEleven, notify } from '../state/store';
+import { S, cfg, currentLang, hasEleven, notify } from '../state/store';
 
 const NOVELTY =
   /fred|junior|ralph|kathy|albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|pipe organ|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i;
 const FEMALE =
-  /samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zoe|serena|kate|veena|nicky|female|zira|hazel|catherine|martha|sara|emma|olivia|amy|joanna|kimberly|salli|ivy|kendra|aria|jenny|libby|sonia|natasha|isla|mia/i;
+  /samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zoe|serena|kate|veena|nicky|female|lekha|piya|vani|geeta|soumya|kiyara|aditi|kalpana|heera|swara|neerja|swara|pallavi|shruti|tanishaa|zira|hazel|catherine|martha|sara|emma|olivia|amy|joanna|kimberly|salli|ivy|kendra|aria|jenny|libby|sonia|natasha|isla|mia/i;
 const MALE =
-  /daniel|alex|tom|oliver|rishi|fred|aaron|arthur|gordon|lee|evan|nathan|male|david|mark|george|james|ryan|guy|brian|matthew|joey|justin|thomas|rocko|ralph|junior/i;
+  /daniel|alex|tom|oliver|rishi|hemant|ravi|madhur|prabhat|valluvar|mohan|fred|aaron|arthur|gordon|lee|evan|nathan|male|david|mark|george|james|ryan|guy|brian|matthew|joey|justin|thomas|rocko|ralph|junior/i;
 
 const guessGender = (name) => (FEMALE.test(name) ? 'female' : MALE.test(name) ? 'male' : 'unknown');
 
 /* ---------- browser voices (Web Speech API) ---------- */
 
-let browserVoices = [];
-export const getBrowserVoices = () => browserVoices;
+let allBrowserVoices = [];
+
+/** Does a voice speak this language? ('hi' matches hi-IN and hi_IN). */
+const speaks = (v, lang) => new RegExp(`^${lang}([-_]|$)`, 'i').test(v.lang);
+
+/** The browser's voices for the story's language, local ones first (max 24). */
+export const getBrowserVoices = (lang = currentLang()) => {
+  return allBrowserVoices.filter((v) => speaks(v, lang)).slice(0, 24);
+};
 
 function loadBrowserVoices() {
   if (!('speechSynthesis' in window)) return;
-  const english = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang) && !NOVELTY.test(v.name));
   const seen = new Set();
-  browserVoices = english
+  allBrowserVoices = speechSynthesis
+    .getVoices()
+    .filter((v) => !NOVELTY.test(v.name))
     .filter((v) => (seen.has(v.name) ? false : seen.add(v.name)))
-    .sort((a, b) => b.localService - a.localService || a.name.localeCompare(b.name))
-    .slice(0, 24);
+    .sort((a, b) => b.localService - a.localService || a.name.localeCompare(b.name));
 }
 
 if ('speechSynthesis' in window) {
@@ -76,7 +83,7 @@ export async function loadElevenVoices() {
 /** The voices the user can pick from right now, in one common shape. */
 export function voiceList() {
   if (hasEleven()) return elevenVoices || [];
-  return browserVoices.map((v) => ({
+  return getBrowserVoices().map((v) => ({
     id: v.name,
     name: v.name.replace(/\s*\(.*\)/, ''),
     gender: guessGender(v.name),
@@ -109,10 +116,16 @@ export function autoCast(an) {
       if (o.length) pool = [...o, ...pool];
     }
     const pick = pool.find((v) => !used[v.id]) || pool[i % Math.max(1, pool.length)];
-    if (pick) used[pick.id] = 1;
+    // Few languages have more than one or two browser voices, so characters often share one.
+    // A shared voice gets a different pitch per character (higher for women, lower for men).
+    const shared = pick ? used[pick.id] || 0 : 0;
+    if (pick) used[pick.id] = shared + 1;
+    let shift = [0, 10, -10, 18, -18][shared % 5];
+    if (pick && c.gender === 'female' && pick.gender === 'male') shift += 22;
+    if (pick && c.gender === 'male' && pick.gender === 'female') shift -= 22;
     const base = {
       speed: c.age === 'elder' ? 0.9 : c.eerie ? 0.85 : 1,
-      tone: c.age === 'young' || c.age === 'child' ? 72 : c.age === 'elder' ? 30 : c.eerie ? 18 : 50,
+      tone: clamp((c.age === 'young' || c.age === 'child' ? 72 : c.age === 'elder' ? 30 : c.eerie ? 18 : 50) + shift, 5, 95),
       emotion: c.eerie ? 'whisper' : c.name === 'Narrator' ? 'calm' : 'determined',
     };
     const stillValid = prev && list.some((v) => v.id === prev.voice);

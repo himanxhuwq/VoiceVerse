@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { EMO } from '../data/constants';
 import { cap1 } from '../lib/utils';
-import { S, commit, hasAI, hasEleven, useAppState } from '../state/store';
+import { S, commit, currentLang, hasAI, hasEleven, useAppState } from '../state/store';
+import { langName } from '../lib/language';
 import { aiLabel } from '../ai/llm';
 import { castWithAI, go } from '../state/navigation';
 import { toast } from '../state/toast';
@@ -147,7 +148,7 @@ export default function Voices() {
             <span>
               {hasEleven()
                 ? 'No ElevenLabs voices loaded yet. Check your key in settings.'
-                : 'This browser has no built-in English voices, so playback will run silently with music and effects. Try Chrome or Safari on a laptop, or add an ElevenLabs key.'}
+                : `This browser has no ${langName(currentLang())} voice, so playback will run silently with music and effects. Add an ElevenLabs key (it speaks ${langName(currentLang())}), or install a ${langName(currentLang())} voice: on a Mac, System Settings → Accessibility → Spoken Content → System voice → Manage voices; on Windows, Settings → Time & language → Speech.`}
             </span>
           </div>
         )}

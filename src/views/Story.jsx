@@ -4,6 +4,7 @@ import { GENRE_OPTIONS } from '../data/constants';
 import { SAMPLES } from '../data/samples';
 import { clamp, words } from '../lib/utils';
 import { S, commit, hasAI, useAppState } from '../state/store';
+import { LANGUAGES, detectLanguage, langName } from '../lib/language';
 import { analyseStory, openSettings } from '../state/navigation';
 import { toast } from '../state/toast';
 import { aiLabel, generateStory } from '../ai/llm';
@@ -68,7 +69,12 @@ function GenerateTab({ busy, setBusy, setError }) {
   const [idea, setIdea] = useState('');
   const generate = async () => {
     if (!hasAI()) {
-      const next = SAMPLES[(SAMPLES.findIndex((x) => x.title === S.title) + 1) % SAMPLES.length];
+      // a sample in the chosen language when there is one, else the next English sample
+      const lang = S.lang === 'auto' ? 'en' : S.lang;
+      const pool = SAMPLES.filter((x) => (x.lang || 'en') === lang).length
+        ? SAMPLES.filter((x) => (x.lang || 'en') === lang)
+        : SAMPLES.filter((x) => !x.lang);
+      const next = pool[(pool.findIndex((x) => x.title === S.title) + 1) % pool.length];
       Object.assign(S, { title: next.title, text: next.text, tab: 'paste' });
       commit();
       toast('Loaded a sample story');
@@ -77,7 +83,11 @@ function GenerateTab({ busy, setBusy, setError }) {
     setBusy(true);
     setError('');
     try {
-      const story = await generateStory(S.genreHint === 'auto' ? 'fantasy' : S.genreHint, idea);
+      const story = await generateStory(
+        S.genreHint === 'auto' ? 'fantasy' : S.genreHint,
+        idea,
+        S.lang === 'auto' ? 'en' : S.lang,
+      );
       Object.assign(S, { title: story.title, text: story.text, tab: 'paste' });
     } catch (e) {
       setError(e.message);
@@ -234,9 +244,18 @@ export default function Story() {
             <div className="field">
               <label htmlFor="lang">Language</label>
               <select className="inp" id="lang" value={state.lang} onChange={(e) => update({ lang: e.target.value })}>
-                <option value="en">English</option>
-                <option disabled>Bengali (after the MVP)</option>
+                <option value="auto">Detect automatically</option>
+                {LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.code === 'en' ? 'English' : `${l.name} · ${l.native}`}
+                  </option>
+                ))}
               </select>
+              {state.lang === 'auto' && state.text.trim().length > 20 && (
+                <small className="hint" style={{ display: 'block', marginTop: 8 }}>
+                  Detected: {langName(detectLanguage(state.text))}
+                </small>
+              )}
             </div>
             <div className="field">
               <label htmlFor="genre">Genre</label>

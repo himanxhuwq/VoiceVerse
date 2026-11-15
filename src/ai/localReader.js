@@ -3,6 +3,8 @@
 // speaking, groups paragraphs into scenes, and guesses mood, genre and
 // sound-effect cues. Used in demo mode and as a fallback if the AI fails.
 import { clamp, cap1, words } from '../lib/utils';
+import { SENTENCE_END } from '../lib/language';
+import { INDIC_SFX, indicGender, indicSpeaker } from './indicReader';
 
 const VERBS =
   'said|says|asked|told|whispered|shouted|called|cried|replied|answered|muttered|murmured|sang|yelled|hissed|laughed|added|warned|snapped|sighed|begged|growled|breathed|announced|declared|exclaimed|insisted|explained|demanded|screamed|roared|giggled|grumbled|admitted|promised|wondered';
@@ -32,6 +34,18 @@ const SFX_WORDS = {
 };
 const MOOD_WORDS = {
   tense: [
+    'ঝড়',
+    'বজ্র',
+    'অন্ধকার',
+    'কাঁপ',
+    'तूफ़ान',
+    'तूफान',
+    'आँधी',
+    'बिजली',
+    'डर',
+    'काँप',
+    'अँधेरा',
+    'चीख',
     'storm',
     'dark',
     'scream',
@@ -55,6 +69,14 @@ const MOOD_WORDS = {
     'crept',
   ],
   mysterious: [
+    'দেবী',
+    'রহস্য',
+    'গম্ভীর স্বর',
+    'आत्मा',
+    'जादू',
+    'रहस्य',
+    'गूँज',
+    'फुसफुसा',
     'strange',
     'whisper',
     'voice',
@@ -73,10 +95,65 @@ const MOOD_WORDS = {
     'silver',
     'exist',
   ],
-  hopeful: ['dawn', 'morning', 'sun', 'smil', 'hope', 'safe', 'warm', 'bright', 'calm', 'answered', 'grew', 'remember'],
-  sad: ['tears', 'cry', 'wept', 'alone', 'lost', 'grief', 'goodbye', 'died', 'sorrow', 'lonely'],
-  happy: ['laugh', 'joy', 'danc', 'celebrat', 'happy', 'cheer', 'grin', 'delight'],
-  epic: ['battle', 'army', 'king', 'dragon', 'war', 'charge', 'sword', 'roar', 'hero', 'legend'],
+  hopeful: [
+    'সকাল',
+    'হাসল',
+    'সূর্য',
+    'सुबह',
+    'सूरज',
+    'उम्मीद',
+    'मुस्कुरा',
+    'रोशनी',
+    'dawn',
+    'morning',
+    'sun',
+    'smil',
+    'hope',
+    'safe',
+    'warm',
+    'bright',
+    'calm',
+    'answered',
+    'grew',
+    'remember',
+  ],
+  sad: [
+    'কান্না',
+    'চোখের জল',
+    'একা',
+    'आँसू',
+    'रोने',
+    'रोई',
+    'अकेल',
+    'दुख',
+    'tears',
+    'cry',
+    'wept',
+    'alone',
+    'lost',
+    'grief',
+    'goodbye',
+    'died',
+    'sorrow',
+    'lonely',
+  ],
+  happy: ['আনন্দ', 'হাসি', 'हँस', 'खुश', 'नाच', 'जश्न', 'laugh', 'joy', 'danc', 'celebrat', 'happy', 'cheer', 'grin', 'delight'],
+  epic: [
+    'युद्ध',
+    'राजा',
+    'सेना',
+    'तलवार',
+    'battle',
+    'army',
+    'king',
+    'dragon',
+    'war',
+    'charge',
+    'sword',
+    'roar',
+    'hero',
+    'legend',
+  ],
 };
 const GENRES = {
   Fantasy: [
@@ -130,7 +207,7 @@ function guessGenre(text) {
   return best;
 }
 
-export function localAnalyse(text, title) {
+export function localAnalyse(text, title, lang = 'en') {
   const paras = text
     .replace(/\r/g, '')
     .split(/\n\s*\n|\n(?=\s*["“])/)
@@ -188,6 +265,7 @@ export function localAnalyse(text, title) {
     else if ((r = a.match(new RegExp(`^\\s*[,.!?]?\\s*(he|she|they|i|it)\\s+${V}\\b`, 'i')))) s.pron = r[1].toLowerCase();
     else if ((r = b.match(new RegExp(`([A-Z][a-z]+(?:\\s[A-Z][a-z]+)?)\\s+${V}[,:.]?\\s*$`)))) s.speaker = norm(r[1]);
     else if ((r = b.match(new RegExp(`\\b(?:the|a|an)\\s+([a-z]+)\\b[^.!?"“”]{0,32}\\b${V}[,:.]?\\s*$`)))) s.speaker = norm(r[1]);
+    if (!s.speaker && !s.pron && lang !== 'en') s.speaker = indicSpeaker(a, b, lang);
     if (s.speaker && STOP.has(s.speaker.split(' ')[0])) s.speaker = null;
     if (s.speaker) named.set(s.speaker, (named.get(s.speaker) || 0) + 1);
   });
@@ -210,7 +288,9 @@ export function localAnalyse(text, title) {
         ? 'young'
         : 'adult';
     const eerie = /spirit|ghost|voice|bell|wind|shadow|witch|demon|dragon|monster/i.test(n);
-    info[n] = { gender: she >= he + 1 ? 'female' : he >= she + 1 ? 'male' : 'unknown', age: eerie ? 'ageless' : age, eerie };
+    let gender = she >= he + 1 ? 'female' : he >= she + 1 ? 'male' : 'unknown';
+    if (lang !== 'en') gender = indicGender(text, n, lang);
+    info[n] = { gender, age: eerie ? 'ageless' : age, eerie };
   }
   // pass 2: resolve remaining quotes
   let lastSpeakerInPara = {},
@@ -268,11 +348,12 @@ export function localAnalyse(text, title) {
   const lines = [];
   segs.forEach((s) => {
     let t = s.text.replace(/^[,.;:\s]+/, '').trim();
-    if (!/[A-Za-z]/.test(t)) return;
+    if (!/\p{L}/u.test(t)) return; // any script, not only English letters
     if (s.kind === 'n') {
       if (words(t) <= 5 && tagRe.test(t)) return;
       t = cap1(t); // split long narration into sentence groups ≤ 220 chars
-      const sents = t.match(/[^.!?]+[.!?]+["”’]?|[^.!?]+$/g) || [t];
+      const E = SENTENCE_END;
+      const sents = t.match(new RegExp(`[^${E}]+[${E}]+["”’]?|[^${E}]+$`, 'g')) || [t];
       let buf = '';
       sents.forEach((x) => {
         if ((buf + x).length > 220 && buf) {
@@ -338,9 +419,13 @@ export function localAnalyse(text, title) {
     // sfx: first line containing each keyword type, max 3 per scene
     const sceneLines = lines.map((l, li) => ({ l, li })).filter((o) => g.includes(o.l.pi));
     const sfx = [];
-    for (const type in SFX_WORDS) {
+    const sfxWords = lang === 'en' ? SFX_WORDS : INDIC_SFX[lang] || {};
+    for (const type in sfxWords) {
       if (sfx.length >= 3) break;
-      const hit = sceneLines.find((o) => new RegExp(`\\b(${SFX_WORDS[type].join('|')})\\b`, 'i').test(o.l.text));
+      // \b only understands English letters, so other scripts match the word anywhere in the line
+      const re =
+        lang === 'en' ? new RegExp(`\\b(${sfxWords[type].join('|')})\\b`, 'i') : new RegExp(sfxWords[type].join('|'), 'u');
+      const hit = sceneLines.find((o) => re.test(o.l.text));
       if (
         hit &&
         !(type === 'steps' && sfx.some((x) => x.type === 'door')) &&
@@ -370,7 +455,7 @@ export function localAnalyse(text, title) {
       .filter(([w]) => !usedTitles.has(w))
       .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0];
     if (top) usedTitles.add(top[0]);
-    const first = (st.match(/[^.!?]+[.!?]/) || [st])[0].replace(/[“”"]/g, '').trim();
+    const first = (st.match(new RegExp(`[^${SENTENCE_END}]+[${SENTENCE_END}]`)) || [st])[0].replace(/[“”"]/g, '').trim();
     return {
       title: top ? 'The ' + top[0] : 'Scene ' + (si + 1),
       mood,
@@ -401,7 +486,9 @@ export function localAnalyse(text, title) {
   });
   const first = /(^|\s)I\s/.test(text.replace(/“[^”]*”|"[^"]*"/g, '')) ? 'First person' : 'Third person';
   return {
-    title: title || guessTitle(text),
+    // other languages: the main character's name stands in for a title until the writer gives one
+    title: title || (lang === 'en' ? guessTitle(text) : chars[1]?.name || 'Untitled story'),
+    lang,
     genre: guessGenre(text),
     style: `${first}, ${arc.length > 2 ? 'slow build' : 'steady'}, ${scenes.some((s) => s.mood === 'tense') ? 'dramatic' : 'warm'} narration`,
     arc,

@@ -1,5 +1,5 @@
 // Moving between the app's steps, plus the actions that start or reset a story.
-import { S, commit, hasAI, hasEleven, notify } from './store';
+import { S, commit, hasAI, hasEleven, notify, storyLang } from './store';
 import { toast } from './toast';
 import { localAnalyse } from '../ai/localReader';
 import { aiLabel, analyseWithAI, recommendVoices } from '../ai/llm';
@@ -43,16 +43,17 @@ export function closeSettings() {
 export async function analyseStory() {
   let warning = '';
   let an;
+  const lang = storyLang();
   if (hasAI()) {
     try {
-      an = await analyseWithAI(S.text, S.title);
+      an = await analyseWithAI(S.text, S.title, lang);
     } catch (e) {
       warning = `${aiLabel()} failed, so the built-in reader was used instead. (${e.message})`;
-      an = localAnalyse(S.text, S.title);
+      an = localAnalyse(S.text, S.title, lang);
     }
   } else {
     await sleep(700); // a beat so the "reading" state is visible
-    an = localAnalyse(S.text, S.title);
+    an = localAnalyse(S.text, S.title, lang);
   }
   if (S.genreHint !== 'auto') an.genre = S.genreHint;
 

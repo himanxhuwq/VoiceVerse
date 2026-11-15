@@ -1,5 +1,5 @@
 // Text-to-speech: ElevenLabs (recorded MP3) or the browser's Web Speech API (live).
-import { cfg, hasEleven } from '../state/store';
+import { cfg, currentLang, hasEleven } from '../state/store';
 import { estimateDuration, getBrowserVoices, voiceParams } from './voices';
 
 /**
@@ -42,6 +42,16 @@ export function speakBrowser(line, onEnd) {
   };
 }
 
+/**
+ * ElevenLabs models: Multilingual v2 and Flash/Turbo v2.5 speak English and Hindi;
+ * Bengali needs Eleven v3, so v3 is used for Bengali stories unless v3 is already chosen.
+ */
+const V2_LANGS = new Set(['en', 'hi']);
+export function elevenModelFor(lang, chosen) {
+  if (/v3/.test(chosen) || V2_LANGS.has(lang)) return chosen;
+  return 'eleven_v3';
+}
+
 /** How long one ElevenLabs request may take, and how many times a failed line is retried. */
 const TTS_TIMEOUT_MS = 30_000;
 const TTS_ATTEMPTS = 4;
@@ -67,7 +77,8 @@ function elevenError(status, detail) {
 }
 
 async function ttsOnce(line, p) {
-  const { el, elModel } = cfg();
+  const { el, elModel: chosen } = cfg();
+  const elModel = elevenModelFor(currentLang(), chosen);
   let res;
   try {
     res = await fetch(
@@ -79,7 +90,10 @@ async function ttsOnce(line, p) {
         body: JSON.stringify({
           text: line.text,
           model_id: elModel,
-          voice_settings: { stability: p.stab, similarity_boost: 0.75, style: p.style, use_speaker_boost: true, speed: p.speed },
+          // v3 only takes stability 0, 0.5 or 1 and no speed/style settings
+          voice_settings: /v3/.test(elModel)
+            ? { stability: Math.round((p.stab ?? 0.5) * 2) / 2, similarity_boost: 0.75 }
+            : { stability: p.stab, similarity_boost: 0.75, style: p.style, use_speaker_boost: true, speed: p.speed },
         }),
       },
     );

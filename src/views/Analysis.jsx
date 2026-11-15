@@ -1,3 +1,4 @@
+import { langInfo, langName } from '../lib/language';
 import { Fragment } from 'react';
 import { motion } from 'motion/react';
 import { MOODS, SFX_TYPES } from '../data/constants';
@@ -77,6 +78,11 @@ export default function Analysis() {
         <motion.div variants={rise} className="panel fact">
           <span className="cap">Genre</span>
           <div className="v">{an.genre}</div>
+          {an.lang && an.lang !== 'en' && (
+            <small className="hint" style={{ display: 'block', marginTop: 6 }}>
+              Language: {langName(an.lang)} · {langInfo(an.lang).native}
+            </small>
+          )}
         </motion.div>
         <motion.div variants={rise} className="panel fact">
           <span className="cap">Scenes</span>

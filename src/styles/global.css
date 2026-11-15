@@ -2170,3 +2170,8 @@ select.chip:hover {
   animation: none !important;
   transition: none !important;
 }
+/* letter-spacing breaks up Indian scripts, so story text in those languages is set without it */
+.spk:not(:lang(en)) {
+  letter-spacing: normal;
+  font-size: 15px;
+}
