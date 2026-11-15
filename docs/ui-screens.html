@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoiceVerse · UI screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* ===== VoiceVerse tokens =====
+   Type: Big Shoulders Display (display, caps), Schibsted Grotesk (UI/body), IBM Plex Mono (timecodes, labels).
+   Scale: major third (1.25) on 16px → 12.8 · 16 · 20 · 25 · 31.25 · 39 · 48.8 · 61 · 76.3 · 95.4
+   Space: 4pt → 4 8 12 16 24 32 48 64 96
+   Radius: one rule: 12px panels, 8px controls, full pill for chips/toggles.
+   Colour (contrast on --bg #0D0F14): --tx 17.1:1 · --mu 7.9:1 · --acc 6.6:1 · ink on --acc 6.6:1
+   Lane colours are data categories only (narration / dialogue / music / sfx). */
+:root{
+  --bg:#0D0F14; --s1:#151821; --s2:#1C2029; --s3:#262B37; --line:#2B303C; --line2:#3A404E;
+  --tx:#F3EFE6; --mu:#A3A9B6; --acc:#FF5A36; --acc-ink:#1A0A05; --acc-t:rgba(255,90,54,.14);
+  --nar:#E9E3D6; --dia:#FF5A36; --mus:#6FC3B2; --sfx:#F4C04E;
+  --f-d:'Big Shoulders Display',sans-serif; --f-b:'Schibsted Grotesk',sans-serif; --f-m:'IBM Plex Mono',monospace;
+  --t1:12.8px; --t2:16px; --t3:20px; --t4:25px; --t5:31.25px; --t6:39px; --t7:48.8px; --t8:61px; --t9:76.3px; --t10:95.4px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07080B;color:var(--tx);font-family:var(--f-b);font-size:var(--t2);line-height:1.5;-webkit-font-smoothing:antialiased;padding:48px;display:flex;flex-direction:column;gap:64px;align-items:center}
+body.solo{padding:0;gap:0;background:var(--bg)}
+.lab{font:500 13px var(--f-m);color:var(--mu);letter-spacing:.06em;align-self:flex-start;max-width:1440px;width:1440px;margin:0 auto -48px}
+body.solo .lab{display:none}
+.screen{width:1440px;height:900px;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;flex:none}
+.screen.m{width:390px;height:844px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.mono{font-family:var(--f-m)}
+.cap{font:500 var(--t1)/1 var(--f-m);letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.disp{font-family:var(--f-d);font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:.005em}
+.ph{font-size:1.1em;line-height:1}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 24px;border-radius:8px;font-weight:600;font-size:var(--t2);white-space:nowrap}
+.btn-p{background:var(--acc);color:var(--acc-ink)}
+.btn-s{background:var(--s2);border:1px solid var(--line2);color:var(--tx)}
+.btn-g{color:var(--mu)}
+.btn-l{height:56px;padding:0 32px;font-size:var(--t3)}
+.btn-sm{height:36px;padding:0 16px;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+
+/* top bar */
+.top{height:72px;flex:none;display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--line);gap:32px}
+.logo{display:flex;align-items:center;gap:10px;font:900 var(--t4)/1 var(--f-d);text-transform:uppercase;letter-spacing:.02em}
+.logo .mk{display:flex;gap:2px;align-items:center;height:24px}
+.logo .mk i{display:block;width:4px;border-radius:2px;background:var(--acc)}
+.steps{display:flex;gap:4px;margin:0 auto;counter-reset:s}
+.steps span{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--mu)}
+.steps span b{font:600 12px var(--f-m);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line2)}
+.steps span.done b{background:var(--s3);border-color:var(--s3);color:var(--tx)}
+.steps span.on{background:var(--s2);color:var(--tx)}
+.steps span.on b{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.top .r{display:flex;gap:12px;align-items:center}
+
+.panel{background:var(--s1);border:1px solid var(--line);border-radius:12px}
+.body{flex:1;display:flex;min-height:0}
+
+/* waveform */
+.wave{display:flex;align-items:center;gap:2px;height:100%}
+.wave i{display:block;flex:1;border-radius:2px;background:var(--line2)}
+
+/* ===== 1 HOME ===== */
+.home{padding:0}
+.home .top{border:0}
+.home .top nav{display:flex;gap:32px;margin-left:auto;color:var(--mu);font-size:15px;font-weight:500}
+.hero{flex:1;display:grid;grid-template-columns:640px 1fr;gap:64px;padding:48px 96px 0;align-items:center}
+.hero h1{font-size:var(--t10);margin:24px 0 24px}
+.hero h1 em{font-style:normal;color:var(--acc)}
+.hero p.lede{font-size:var(--t3);color:var(--mu);max-width:30ch;line-height:1.45}
+.hero .ctas{display:flex;gap:16px;margin-top:48px;align-items:center}
+.onair{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--f-m);letter-spacing:.1em;color:var(--acc);border:1px solid rgba(255,90,54,.4);padding:6px 12px;border-radius:999px}
+.onair .dot{background:var(--acc);box-shadow:0 0 0 4px rgba(255,90,54,.18)}
+.stage{position:relative;height:620px}
+.page{position:absolute;left:0;top:24px;width:400px;background:var(--nar);color:#1B1A17;border-radius:12px;padding:32px;transform:rotate(-3deg);box-shadow:0 32px 64px rgba(0,0,0,.5)}
+.page .cap{color:#5E5A52}
+.page h4{font:800 var(--t5)/1 var(--f-d);text-transform:uppercase;margin:12px 0 16px}
+.page p{font-size:15px;line-height:1.65;margin-bottom:12px}
+.page mark{background:none;padding:0 2px;border-bottom:3px solid}
+.page mark.d{border-color:var(--dia)} .page mark.m{border-color:#2F9A86} .page mark.s{border-color:#D29A12}
+.mixer{position:absolute;right:0;bottom:40px;width:480px;padding:24px;border-radius:12px;background:var(--s1);border:1px solid var(--line2);box-shadow:0 32px 64px rgba(0,0,0,.55)}
+.lane{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:12px;height:40px}
+.lane .ln{font:500 12px var(--f-m);letter-spacing:.06em;color:var(--mu);text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.lane .tr{position:relative;height:28px;border-radius:6px;background:var(--s2)}
+.lane .blk{position:absolute;top:0;bottom:0;border-radius:6px;overflow:hidden;padding:0 4px}
+.lane .blk .wave i{background:rgba(13,15,20,.45)}
+.arrow{position:absolute;left:372px;top:328px;width:120px;height:120px;color:var(--acc);font-size:56px;display:grid;place-items:center}
+.howrow{flex:none;display:grid;grid-template-columns:repeat(4,1fr);margin:0 96px;border-top:1px solid var(--line);padding:24px 0 32px}
+.howrow div{display:flex;gap:12px;align-items:baseline;padding-right:24px}
+.howrow b{font:600 13px var(--f-m);color:var(--acc)}
+.howrow span{font-weight:600}
+.howrow small{display:block;color:var(--mu);font-size:14px;font-weight:400}
+
+/* ===== 2 INPUT ===== */
+.split{display:grid;grid-template-columns:1fr 400px;gap:32px;padding:32px 48px 32px;flex:1;min-height:0}
+.ph1{font-size:var(--t8);margin-bottom:8px}
+.sub{color:var(--mu);font-size:var(--t2)}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--s1);border:1px solid var(--line);border-radius:12px;width:max-content;margin:24px 0 16px}
+.tabs span{display:flex;gap:8px;align-items:center;height:40px;padding:0 16px;border-radius:8px;font-size:15px;font-weight:500;color:var(--mu)}
+.tabs span.on{background:var(--s3);color:var(--tx)}
+.editor{flex:1;display:flex;flex-direction:column;min-height:0}
+.editor .ta{flex:1;padding:32px 40px;font-size:17px;line-height:1.75;color:var(--tx);overflow:hidden;position:relative}
+.editor .ta h3{font:800 var(--t5)/1 var(--f-d);text-transform:uppercase;margin-bottom:16px}
+.editor .ta p{margin-bottom:14px;max-width:72ch}
+.editor .ta::after{content:"";position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(transparent,var(--s1))}
+.editor .ft{display:flex;align-items:center;gap:16px;padding:16px 24px;border-top:1px solid var(--line)}
+.meter{width:160px;height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--mus);border-radius:3px}
+.side{display:flex;flex-direction:column;gap:16px}
+.side .panel{padding:24px}
+.field{margin-bottom:20px}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.sel{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 16px;border-radius:8px;background:var(--s2);border:1px solid var(--line2);font-size:15px}
+.hint{font-size:13px;color:var(--mu);margin-top:8px}
+.gen{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:8px;border:1px dashed var(--line2)}
+.gen .ph{color:var(--sfx);font-size:22px;margin-top:2px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--mu);padding:6px 0}
+.check .ph{color:var(--mus)}
+
+/* ===== 3 ANALYSIS ===== */
+.anwrap{padding:32px 48px;flex:1;display:flex;flex-direction:column;gap:24px;min-height:0}
+.anhead{display:flex;align-items:flex-end;justify-content:space-between}
+.facts{display:grid;grid-template-columns:200px 200px 1fr 240px;gap:16px}
+.fact{padding:20px 24px}
+.fact .v{font:800 var(--t6)/1 var(--f-d);text-transform:uppercase;margin-top:12px}
+.arc{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:nowrap}
+.arc .chip{height:30px}
+.arc .ph{color:var(--mu);font-size:14px}
+.ancols{display:grid;grid-template-columns:1fr 420px;gap:24px;flex:1;min-height:0}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.scene{padding:20px 24px;display:flex;flex-direction:column;gap:10px}
+.scene .row{display:flex;justify-content:space-between;align-items:center}
+.scene h4{font:800 var(--t4)/1 var(--f-d);text-transform:uppercase}
+.scene p{font-size:14px;color:var(--mu);line-height:1.55}
+.scene .cues{display:flex;gap:8px;flex-wrap:wrap}
+.cast{padding:24px;display:flex;flex-direction:column}
+.person{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.person:first-of-type{border-top:0}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:800 var(--t3)/1 var(--f-d);color:var(--acc-ink)}
+.person b{display:block;font-size:16px}
+.person small{color:var(--mu);font-size:13px}
+.person .n{font:500 13px var(--f-m);color:var(--mu);text-align:right}
+
+/* ===== 4 VOICE STUDIO ===== */
+.vs{display:grid;grid-template-columns:340px 1fr;flex:1;min-height:0}
+.castlist{border-right:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:8px}
+.castlist .cap{margin:0 8px 8px}
+.ci{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:12px;border:1px solid transparent}
+.ci.on{background:var(--s1);border-color:var(--line2)}
+.ci b{display:block;font-size:15px}.ci small{color:var(--mu);font-size:13px}
+.ci .ph{color:var(--mu)}
+.ci .ok{color:var(--mus)}
+.vmain{padding:32px 48px;display:flex;flex-direction:column;gap:24px;min-height:0}
+.vhead{display:flex;justify-content:space-between;align-items:flex-end}
+.vhead .who{display:flex;gap:20px;align-items:center}
+.vhead .av{width:72px;height:72px;font-size:var(--t6)}
+.vhead h2{font-size:var(--t8)}
+.voices{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.voice{padding:16px 18px;border-radius:12px;background:var(--s1);border:1px solid var(--line);display:grid;grid-template-columns:40px 1fr;gap:14px;align-items:center}
+.voice.on{border-color:var(--acc);background:linear-gradient(var(--acc-t),var(--acc-t)),var(--s1)}
+.play{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--s3);font-size:16px}
+.voice.on .play{background:var(--acc);color:var(--acc-ink)}
+.voice b{font-size:15px;display:block}.voice small{font-size:13px;color:var(--mu)}
+.voice .wave{height:20px;margin-top:6px}
+.voice.on .wave i{background:rgba(255,90,54,.6)}
+.ctrls{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px}
+.ctrl{padding:20px 24px}
+.ctrl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px}
+.ctrl .row b{font-size:15px}
+.ctrl .row .mono{font-size:14px;color:var(--tx)}
+.slider{position:relative;height:6px;border-radius:3px;background:var(--s3)}
+.slider i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--acc)}
+.slider u{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--tx);transform:translate(-50%,-50%);box-shadow:0 0 0 4px var(--bg)}
+.ends{display:flex;justify-content:space-between;font-size:12px;color:var(--mu);margin-top:12px;font-family:var(--f-m)}
+.emo{display:flex;flex-wrap:wrap;gap:8px}
+.emo .chip{height:32px}
+.emo .chip.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.preview{display:flex;align-items:center;gap:20px;padding:20px 24px}
+.preview .play{width:52px;height:52px;background:var(--acc);color:var(--acc-ink);font-size:20px}
+.preview q{font-size:var(--t3);font-weight:500;flex:1;quotes:"“" "”"}
+.preview .wave{width:280px;height:40px}
+
+/* ===== 5 GENERATING ===== */
+.gen-wrap{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:96px;padding:64px 96px;align-items:center}
+.big-ring{position:relative;width:440px;height:440px;margin:auto}
+.big-ring svg{position:absolute;inset:0}
+.big-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.big-ring .c .disp{font-size:var(--t10)}
+.plist{display:flex;flex-direction:column}
+.pstep{display:grid;grid-template-columns:40px 1fr auto;gap:16px;align-items:center;padding:18px 0;border-top:1px solid var(--line)}
+.pstep:last-child{border-bottom:1px solid var(--line)}
+.pstep .ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:var(--s2);color:var(--mu)}
+.pstep.done .ic{background:rgba(111,195,178,.16);color:var(--mus)}
+.pstep.now .ic{background:var(--acc);color:var(--acc-ink)}
+.pstep b{font-size:var(--t2)}
+.pstep small{display:block;color:var(--mu);font-size:13px}
+.pstep .mono{font-size:13px;color:var(--mu)}
+.pstep.now .mono{color:var(--acc)}
+.pstep.wait{opacity:.55}
+
+/* ===== 6 TIMELINE ===== */
+.tl{flex:1;display:flex;flex-direction:column;padding:24px 32px 24px;gap:16px;min-height:0}
+.tlhead{display:flex;justify-content:space-between;align-items:center}
+.tlhead h2{font-size:var(--t7)}
+.legend{display:flex;gap:20px;font-size:13px;color:var(--mu)}
+.legend span{display:flex;gap:8px;align-items:center}
+.board{flex:1;display:grid;grid-template-columns:120px 1fr;min-height:0;border-radius:12px;background:var(--s1);border:1px solid var(--line);overflow:hidden}
+.lanes-l{border-right:1px solid var(--line);display:grid;grid-template-rows:56px repeat(4,1fr)}
+.lanes-l div{display:flex;align-items:center;gap:8px;padding:0 12px;font:500 12px var(--f-m);letter-spacing:.06em;text-transform:uppercase;color:var(--mu);border-top:1px solid var(--line)}
+.lanes-l div:first-child{border:0}
+.grid{position:relative;display:grid;grid-template-rows:56px repeat(4,1fr)}
+.ruler{display:grid;grid-template-columns:52fr 66fr 59fr 45fr}
+.ruler div{padding:10px 16px;border-left:1px solid var(--line)}
+.ruler div:first-child{border:0}
+.ruler b{display:block;font-size:14px}
+.ruler .mono{font-size:12px;color:var(--mu)}
+.trk{position:relative;border-top:1px solid var(--line)}
+.sep{position:absolute;top:56px;bottom:0;width:1px;background:var(--line);z-index:0}
+.b{z-index:1}
+.b{position:absolute;top:14px;bottom:14px;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;color:#111}
+.b span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
+.b .wave{position:absolute;left:8px;right:8px;bottom:6px;height:22px}
+.b .wave i{background:rgba(13,15,20,.28)}
+.b.nar{background:var(--nar)} .b.dia{background:var(--dia)} .b.mus{background:var(--mus)} .b.sfx{background:var(--sfx);top:20px;bottom:20px}
+.b.sel{outline:2px solid var(--tx);outline-offset:2px}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--tx);z-index:3}
+.playhead::before{content:"";position:absolute;top:0;left:-6px;width:14px;height:14px;background:var(--tx);border-radius:3px 3px 50% 50%}
+.inspector{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;padding:16px 24px}
+.inspector .sw{width:48px;height:48px;border-radius:12px;background:var(--sfx);color:#111;display:grid;place-items:center;font-size:24px}
+.inspector b{font-size:var(--t3)}
+.inspector small{display:block;color:var(--mu);font-size:14px}
+.inspector .r{display:flex;gap:12px;align-items:center}
+
+/* ===== 7 PLAYER ===== */
+.player{flex:1;display:grid;grid-template-columns:1fr 400px;min-height:0}
+.pmain{padding:48px 64px 40px;display:flex;flex-direction:column;min-height:0;position:relative}
+.pmain .glow{position:absolute;left:-200px;top:-260px;width:900px;height:700px;background:radial-gradient(closest-side,rgba(255,90,54,.13),transparent);pointer-events:none}
+.ptitle{font-size:var(--t10);margin:16px 0 8px}
+.nowp{display:flex;gap:16px;align-items:center;color:var(--mu)}
+.lyric{margin-top:auto;margin-bottom:40px;display:flex;flex-direction:column;gap:12px;max-width:820px}
+.lyric p{font-size:var(--t4);line-height:1.35;color:#5D6370;font-weight:500}
+.lyric p.cur{color:var(--tx);font-size:var(--t5);font-weight:600}
+.lyric p .spk{font:600 13px var(--f-m);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px}
+.lyric p.cur .spk{color:var(--acc)}
+.bigwave{height:96px;position:relative}
+.wave i.p{background:var(--acc)}
+.markers{position:relative;height:28px;margin-top:8px}
+.markers span{position:absolute;top:0;font:500 12px var(--f-m);color:var(--mu);transform:translateX(0);padding-left:8px;border-left:1px solid var(--line2)}
+.trans{display:flex;align-items:center;gap:24px;margin-top:24px}
+.trans .pp{width:72px;height:72px;border-radius:50%;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center;font-size:30px}
+.trans .sk{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:var(--s2);border:1px solid var(--line)}
+.trans .time{font:500 15px var(--f-m);color:var(--mu)}
+.trans .time b{color:var(--tx);font-weight:500}
+.trans .r{margin-left:auto;display:flex;gap:12px}
+.chap{border-left:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:8px;background:var(--s1)}
+.ch{display:grid;grid-template-columns:36px 1fr auto;gap:12px;padding:14px 12px;border-radius:12px;align-items:center}
+.ch .num{font:800 var(--t4)/1 var(--f-d);color:var(--mu)}
+.ch b{font-size:15px;display:block}.ch small{color:var(--mu);font-size:13px}
+.ch .mono{font-size:13px;color:var(--mu)}
+.ch.on{background:var(--s3)}
+.ch.on .num{color:var(--acc)}
+.ch .bar{grid-column:2/4;height:3px;border-radius:2px;background:var(--line2);overflow:hidden;margin-top:6px}
+.ch .bar i{display:block;height:100%;background:var(--acc)}
+.castmini{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--line)}
+.castmini .avs{display:flex;gap:8px;margin-top:12px}
+.castmini .av{width:36px;height:36px;font-size:16px}
+.castmini .av.speaking{box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--acc)}
+
+/* ===== 8 EXPORT ===== */
+.ex{flex:1;display:grid;grid-template-columns:520px 1fr;gap:64px;padding:48px 96px;align-items:start}
+.cover{border-radius:12px;aspect-ratio:1;background:var(--s1);border:1px solid var(--line);position:relative;overflow:hidden;padding:40px;display:flex;flex-direction:column;justify-content:space-between}
+.cover .rays{position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(255,90,54,.35),transparent 55%),radial-gradient(circle at 20% 90%,rgba(111,195,178,.18),transparent 50%)}
+.cover .disp{font-size:var(--t9);position:relative}
+.cover .wave{height:64px;position:relative}
+.cover .wave i{background:rgba(243,239,230,.55)}
+.cover .meta{position:relative;display:flex;justify-content:space-between;font:500 14px var(--f-m);color:var(--mu)}
+.opts{display:flex;flex-direction:column;gap:24px}
+.fmt{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fmt>div{padding:20px 24px;border-radius:12px;border:1px solid var(--line);background:var(--s1);display:grid;grid-template-columns:24px 1fr auto;gap:14px;align-items:center}
+.fmt>div.on{border-color:var(--acc);background:linear-gradient(var(--acc-t),var(--acc-t)),var(--s1)}
+.radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2)}
+.fmt .on .radio{border:6px solid var(--acc)}
+.fmt b{font-size:var(--t3);display:block}.fmt small{font-size:13px;color:var(--mu)}
+.fmt .mono{font-size:14px;color:var(--mu)}
+.share{display:flex;gap:12px}
+.share .url{flex:1;display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;border-radius:8px;background:var(--s2);border:1px solid var(--line2);font:500 14px var(--f-m);color:var(--mu)}
+.more{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.more>div{padding:20px 24px;display:flex;gap:14px;align-items:center}
+.more .ph{font-size:24px;color:var(--mu)}
+.more b{display:block;font-size:15px}.more small{color:var(--mu);font-size:13px}
+
+/* ===== 9 MOBILE PLAYER ===== */
+.m .mtop{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:none}
+.m .logo{font-size:20px}
+.m .art{margin:8px 16px 0;border-radius:12px;height:300px;background:var(--s1);border:1px solid var(--line);position:relative;overflow:hidden;padding:24px;display:flex;flex-direction:column;justify-content:flex-end}
+.m .art .rays{position:absolute;inset:0;background:radial-gradient(circle at 70% 20%,rgba(255,90,54,.38),transparent 60%)}
+.m .art .disp{font-size:var(--t7);position:relative}
+.m .art .cap{position:relative;margin-bottom:12px}
+.m .mly{padding:24px 16px 0}
+.m .mly .spk{font:600 12px var(--f-m);letter-spacing:.08em;color:var(--acc);text-transform:uppercase}
+.m .mly p{font-size:var(--t3);font-weight:600;line-height:1.4;margin-top:6px}
+.m .mw{height:48px;margin:24px 16px 0}
+.m .mt{display:flex;justify-content:space-between;padding:8px 16px 0;font:500 12px var(--f-m);color:var(--mu)}
+.m .mctrl{display:flex;justify-content:center;align-items:center;gap:32px;margin-top:20px}
+.m .mctrl .pp{width:72px;height:72px;border-radius:50%;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center;font-size:30px}
+.m .mctrl .sk{font-size:26px;color:var(--tx)}
+.m .mscn{display:flex;gap:8px;padding:0 16px;margin-top:auto;margin-bottom:16px}
+.m .mscn span{height:36px;padding:0 14px;border-radius:999px;display:grid;place-items:center;font:500 13px var(--f-m);background:var(--s1);border:1px solid var(--line);color:var(--mu)}
+.m .mscn .on2{color:var(--tx)}
+.m .mscn .cur2{flex:1;background:var(--s3);color:var(--tx);border-color:var(--line2)}
+.m .mbar{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);height:72px}
+.m .mbar div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--mu)}
+.m .mbar div i{font-size:22px}
+.m .mbar div.on{color:var(--tx)}
+</style>
+</head>
+<body>
+
+<!-- 1 HOME -->
+<p class="lab">01 · HOME</p>
+<section class="screen home" id="s1">
+  <header class="top">
+    <div class="logo"><span class="mk"><i style="height:10px"></i><i style="height:20px"></i><i style="height:14px"></i><i style="height:24px"></i><i style="height:8px"></i></span>VoiceVerse</div>
+    <nav><span>How it works</span><span>Listen to a sample</span></nav>
+    <button class="btn btn-s btn-sm">Create Audio Story</button>
+  </header>
+  <div class="hero">
+    <div>
+      <span class="onair"><span class="dot"></span>AI AUDIO-STORY STUDIO</span>
+      <h1 class="disp">Turn your story into a <em>cinematic</em> audio experience.</h1>
+      <p class="lede">Paste a story. VoiceVerse casts the voices, scores the scenes and adds the sound, ready to play.</p>
+      <div class="ctas">
+        <button class="btn btn-p btn-l"><i class="ph ph-microphone-stage"></i>Create Audio Story</button>
+        <button class="btn btn-g"><i class="ph-fill ph-play-circle" style="font-size:28px;color:var(--tx)"></i>Hear a 30s sample</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="page">
+        <span class="cap">Your story · 412 words</span>
+        <h4>The Lantern Keeper</h4>
+        <p>The wind came off the sea long before the <mark class="s">thunder</mark> did. Mira climbed the last stair of the lighthouse, the lantern swinging in her hand.</p>
+        <p><mark class="d">“Keep it lit, whatever comes,”</mark> old Tomas had told her.</p>
+        <p>Below, the waves turned black. Somewhere in the <mark class="m">storm</mark>, a voice that was not the wind began to sing.</p>
+      </div>
+      <div class="arrow"><i class="ph ph-arrow-bend-down-right"></i></div>
+      <div class="mixer">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span class="cap">Scene 2 · The storm</span><span class="mono" style="font-size:13px;color:var(--mu)">00:48 / 03:42</span></div>
+        <div class="lane"><span class="ln"><span class="dot" style="background:var(--nar)"></span>Narrator</span><div class="tr"><div class="blk" style="left:0;width:58%;background:var(--nar)"><div class="wave" data-n="40" data-s="3"></div></div></div></div>
+        <div class="lane"><span class="ln"><span class="dot" style="background:var(--dia)"></span>Tomas</span><div class="tr"><div class="blk" style="left:60%;width:30%;background:var(--dia)"><div class="wave" data-n="22" data-s="5"></div></div></div></div>
+        <div class="lane"><span class="ln"><span class="dot" style="background:var(--mus)"></span>Music</span><div class="tr"><div class="blk" style="left:0;width:100%;background:var(--mus)"><div class="wave" data-n="70" data-s="9" data-lo="1"></div></div></div></div>
+        <div class="lane"><span class="ln"><span class="dot" style="background:var(--sfx)"></span>Effects</span><div class="tr"><div class="blk" style="left:22%;width:12%;background:var(--sfx)"></div><div class="blk" style="left:70%;width:16%;background:var(--sfx)"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="howrow">
+    <div><b>01</b><span>Write or paste<small>300–500 words, or generate one</small></span></div>
+    <div><b>02</b><span>AI reads it<small>Scenes, characters, mood</small></span></div>
+    <div><b>03</b><span>Voices + sound<small>Cast, music bed, effects</small></span></div>
+    <div><b>04</b><span>Play &amp; download<small>MP3 or WAV, or a link</small></span></div>
+  </div>
+</section>
+
+<!-- shared top bar builder target: data-step -->
+<!-- 2 STORY INPUT -->
+<p class="lab">02 · STORY INPUT</p>
+<section class="screen" id="s2" data-step="1">
+  <div class="body"><div class="split">
+    <div class="editor">
+      <h1 class="disp ph1">Your story</h1>
+      <p class="sub">Paste it, upload a .txt, or let VoiceVerse write one to start from.</p>
+      <div class="tabs"><span class="on"><i class="ph ph-text-aa"></i>Paste text</span><span><i class="ph ph-upload-simple"></i>Upload .txt</span><span><i class="ph ph-sparkle"></i>Generate a story</span></div>
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="ta">
+          <h3>The Lantern Keeper</h3>
+          <p>The wind came off the sea long before the thunder did. Mira climbed the last stair of the lighthouse, the lantern swinging in her hand, and set it down beside the great dark lens.</p>
+          <p>“Keep it lit, whatever comes,” old Tomas had told her that morning, coughing into his sleeve. “Ships are counting on it. So am I.”</p>
+          <p>By dusk the sky had turned the colour of a bruise. Rain hammered the glass. Below, the waves rose black and white against the rocks, and the door at the foot of the tower banged open, then shut, then open again.</p>
+          <p>Then, somewhere inside the storm, a voice that was not the wind began to sing.</p>
+        </div>
+        <div class="ft">
+          <span class="mono" style="font-size:14px"><b style="color:var(--tx)">412</b> <span style="color:var(--mu)">/ 500 words</span></span>
+          <span class="meter"><i style="width:82%"></i></span>
+          <span style="font-size:13px;color:var(--mu)">Good length for a 3–4 minute story</span>
+          <button class="btn btn-g btn-sm" style="margin-left:auto"><i class="ph ph-eraser"></i>Clear</button>
+        </div>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="panel">
+        <div class="field"><label>Language</label><div class="sel">English <i class="ph ph-caret-down"></i></div><p class="hint">Bengali is coming after we test its voice quality.</p></div>
+        <div class="field"><label>Genre</label><div class="sel"><span>Let the AI decide</span><i class="ph ph-caret-down"></i></div></div>
+        <div class="field" style="margin:0"><label>Story title</label><div class="sel">The Lantern Keeper</div></div>
+      </div>
+      <div class="gen"><i class="ph ph-sparkle"></i><div><b style="font-size:15px">No story yet?</b><p class="hint" style="margin-top:4px">Try “Generate a fantasy story” and edit what comes back.</p><button class="btn btn-s btn-sm" style="margin-top:12px">Generate a fantasy story</button></div></div>
+      <div class="panel" style="padding:20px 24px">
+        <span class="cap">Works best with</span>
+        <div style="margin-top:12px">
+          <div class="check"><i class="ph-fill ph-check-circle"></i>2–4 named characters</div>
+          <div class="check"><i class="ph-fill ph-check-circle"></i>Dialogue in quote marks</div>
+          <div class="check"><i class="ph-fill ph-check-circle"></i>Sounds you can hear: rain, doors, steps</div>
+        </div>
+      </div>
+      <button class="btn btn-p btn-l" style="margin-top:auto;justify-content:center">Analyse story<i class="ph ph-arrow-right"></i></button>
+    </aside>
+  </div></div>
+</section>
+
+<!-- 3 ANALYSIS -->
+<p class="lab">03 · STORY ANALYSIS</p>
+<section class="screen" id="s3" data-step="2">
+  <div class="anwrap">
+    <div class="anhead">
+      <div><span class="cap">What the AI found</span><h1 class="disp ph1" style="margin-top:12px">The Lantern Keeper</h1></div>
+      <div style="display:flex;gap:12px"><button class="btn btn-s"><i class="ph ph-arrow-counter-clockwise"></i>Re-analyse</button><button class="btn btn-p">Cast the voices<i class="ph ph-arrow-right"></i></button></div>
+    </div>
+    <div class="facts">
+      <div class="panel fact"><span class="cap">Genre</span><div class="v">Fantasy</div></div>
+      <div class="panel fact"><span class="cap">Scenes</span><div class="v">4</div></div>
+      <div class="panel fact"><span class="cap">Mood across the story</span>
+        <div class="arc"><span class="chip">Calm</span><i class="ph ph-arrow-right"></i><span class="chip" style="border-color:var(--acc);color:var(--acc)">Tense</span><i class="ph ph-arrow-right"></i><span class="chip">Mysterious</span><i class="ph ph-arrow-right"></i><span class="chip">Hopeful</span></div></div>
+      <div class="panel fact"><span class="cap">Narration style</span><div style="font-size:var(--t3);font-weight:600;margin-top:12px;line-height:1.3">Warm, third person, slow build</div></div>
+    </div>
+    <div class="ancols">
+      <div class="scenes">
+        <div class="panel scene"><div class="row"><span class="cap">Scene 01</span><span class="chip">Calm</span></div><h4>The climb</h4><p>Mira carries the lantern up the lighthouse; Tomas's warning.</p><div class="cues"><span class="chip"><span class="dot" style="background:var(--mus)"></span>Soft strings</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Wind</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Footsteps</span></div></div>
+        <div class="panel scene" style="border-color:rgba(255,90,54,.45)"><div class="row"><span class="cap">Scene 02</span><span class="chip" style="border-color:var(--acc);color:var(--acc)">Tense</span></div><h4>The storm</h4><p>Rain hits the glass, the tower door bangs in the wind.</p><div class="cues"><span class="chip"><span class="dot" style="background:var(--mus)"></span>Low drums</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Rain</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Thunder</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Door</span></div></div>
+        <div class="panel scene"><div class="row"><span class="cap">Scene 03</span><span class="chip">Mysterious</span></div><h4>The singing</h4><p>A voice inside the storm; the Storm Spirit speaks to Mira.</p><div class="cues"><span class="chip"><span class="dot" style="background:var(--mus)"></span>Choir pad</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Magic shimmer</span></div></div>
+        <div class="panel scene"><div class="row"><span class="cap">Scene 04</span><span class="chip">Hopeful</span></div><h4>First light</h4><p>The lamp holds. Dawn, gulls, and a ship's horn far out.</p><div class="cues"><span class="chip"><span class="dot" style="background:var(--mus)"></span>Rising piano</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Birds</span><span class="chip"><span class="dot" style="background:var(--sfx)"></span>Waves</span></div></div>
+      </div>
+      <div class="panel cast">
+        <span class="cap" style="margin-bottom:8px">Characters · 4</span>
+        <div class="person"><span class="av" style="background:var(--nar)">N</span><div><b>Narrator</b><small>Tells the story</small></div><span class="n">31 lines</span></div>
+        <div class="person"><span class="av" style="background:var(--acc)">M</span><div><b>Mira</b><small>Main · young lighthouse keeper</small></div><span class="n">9 lines</span></div>
+        <div class="person"><span class="av" style="background:var(--mus)">T</span><div><b>Old Tomas</b><small>Side · her mentor</small></div><span class="n">4 lines</span></div>
+        <div class="person"><span class="av" style="background:var(--sfx)">S</span><div><b>The Storm Spirit</b><small>Side · a voice in the storm</small></div><span class="n">5 lines</span></div>
+        <p class="hint" style="margin-top:auto;padding-top:16px;border-top:1px solid var(--line)"><i class="ph ph-pencil-simple"></i> Wrong name or role? Click a character to fix it before casting.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 VOICE STUDIO -->
+<p class="lab">04 · VOICE STUDIO</p>
+<section class="screen" id="s4" data-step="3">
+  <div class="vs">
+    <div class="castlist">
+      <span class="cap">Cast · 4 voices</span>
+      <div class="ci"><span class="av" style="background:var(--nar)">N</span><div><b>Narrator</b><small>Warm storyteller</small></div><i class="ph-fill ph-check-circle ok"></i></div>
+      <div class="ci on"><span class="av" style="background:var(--acc)">M</span><div><b>Mira</b><small>Choosing a voice…</small></div><i class="ph ph-caret-right"></i></div>
+      <div class="ci"><span class="av" style="background:var(--mus)">T</span><div><b>Old Tomas</b><small>Gravelly elder</small></div><i class="ph-fill ph-check-circle ok"></i></div>
+      <div class="ci"><span class="av" style="background:var(--sfx)">S</span><div><b>The Storm Spirit</b><small>Not cast yet</small></div><i class="ph ph-circle"></i></div>
+      <div style="margin-top:auto;padding:16px 8px 0;border-top:1px solid var(--line)">
+        <p class="hint" style="margin:0 0 12px">AI suggested a voice for everyone. Change any you don't like.</p>
+        <button class="btn btn-p" style="width:100%;justify-content:center">Build the audio<i class="ph ph-arrow-right"></i></button>
+      </div>
+    </div>
+    <div class="vmain">
+      <div class="vhead">
+        <div class="who"><span class="av" style="background:var(--acc)">M</span><div><span class="cap">Main character</span><h2 class="disp" style="margin-top:8px">Mira</h2></div></div>
+        <span class="chip"><i class="ph ph-sparkle" style="color:var(--sfx)"></i>AI pick: young, brave, a little scared</span>
+      </div>
+      <div class="voices">
+        <div class="voice on"><span class="play"><i class="ph-fill ph-pause"></i></span><div><b>Bright young female</b><small>Clear · determined</small><div class="wave" data-n="34" data-s="11"></div></div></div>
+        <div class="voice"><span class="play"><i class="ph-fill ph-play"></i></span><div><b>Soft young female</b><small>Gentle · breathy</small><div class="wave" data-n="34" data-s="12"></div></div></div>
+        <div class="voice"><span class="play"><i class="ph-fill ph-play"></i></span><div><b>Teen girl</b><small>Quick · curious</small><div class="wave" data-n="34" data-s="13"></div></div></div>
+        <div class="voice"><span class="play"><i class="ph-fill ph-play"></i></span><div><b>Warm adult female</b><small>Calm · grounded</small><div class="wave" data-n="34" data-s="14"></div></div></div>
+        <div class="voice"><span class="play"><i class="ph-fill ph-play"></i></span><div><b>Husky female</b><small>Low · intense</small><div class="wave" data-n="34" data-s="15"></div></div></div>
+        <div class="voice"><span class="play"><i class="ph-fill ph-play"></i></span><div><b>Young male</b><small>Light · eager</small><div class="wave" data-n="34" data-s="16"></div></div></div>
+      </div>
+      <div class="ctrls">
+        <div class="panel ctrl"><div class="row"><b>Speed</b><span class="mono">1.05×</span></div><div class="slider"><i style="width:55%"></i><u style="left:55%"></u></div><div class="ends"><span>Slower</span><span>Faster</span></div></div>
+        <div class="panel ctrl"><div class="row"><b>Tone</b><span class="mono">Bright</span></div><div class="slider"><i style="width:68%"></i><u style="left:68%"></u></div><div class="ends"><span>Warm</span><span>Crisp</span></div></div>
+        <div class="panel ctrl"><div class="row"><b>Emotion</b><span class="mono" style="color:var(--mu)">pick one</span></div><div class="emo"><span class="chip">Calm</span><span class="chip on">Determined</span><span class="chip">Afraid</span><span class="chip">Joyful</span><span class="chip">Whisper</span></div></div>
+      </div>
+      <div class="panel preview">
+        <span class="play"><i class="ph-fill ph-play"></i></span>
+        <div style="flex:1"><span class="cap">Hear it in the story · scene 3</span><q style="display:block;margin-top:8px">I won't let it go out. Not tonight.</q></div>
+        <div class="wave" data-n="56" data-s="21"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 GENERATING -->
+<p class="lab">05 · BUILDING THE AUDIO (loading state)</p>
+<section class="screen" id="s5" data-step="4">
+  <div class="gen-wrap">
+    <div class="big-ring">
+      <svg viewBox="0 0 440 440"><circle cx="220" cy="220" r="200" fill="none" stroke="#262B37" stroke-width="12"/><circle cx="220" cy="220" r="200" fill="none" stroke="#FF5A36" stroke-width="12" stroke-linecap="round" stroke-dasharray="1256.6" stroke-dashoffset="490" transform="rotate(-90 220 220)"/></svg>
+      <div class="c"><span class="disp">61%</span><span class="cap" style="margin-top:12px">About 40 seconds left</span></div>
+    </div>
+    <div>
+      <span class="cap">Building your audio story</span>
+      <h1 class="disp" style="font-size:var(--t8);margin:12px 0 32px">Recording the cast</h1>
+      <div class="plist">
+        <div class="pstep done"><span class="ic"><i class="ph ph-check"></i></span><div><b>Writing the script</b><small>49 lines, each tagged to a speaker</small></div><span class="mono">Done</span></div>
+        <div class="pstep now"><span class="ic"><i class="ph ph-microphone"></i></span><div><b>Recording voices</b><small>Mira · line 6 of 9</small></div><span class="mono">30 / 49</span></div>
+        <div class="pstep wait"><span class="ic"><i class="ph ph-music-notes"></i></span><div><b>Picking the music</b><small>One bed per scene, from the library</small></div><span class="mono">Next</span></div>
+        <div class="pstep wait"><span class="ic"><i class="ph ph-waveform"></i></span><div><b>Placing sound effects</b><small>10 cues across 4 scenes</small></div><span class="mono">—</span></div>
+        <div class="pstep wait"><span class="ic"><i class="ph ph-sliders-horizontal"></i></span><div><b>Mixing it together</b><small>Voices on top, music underneath</small></div><span class="mono">—</span></div>
+      </div>
+      <p class="hint" style="margin-top:24px"><i class="ph ph-info"></i> Keep this tab open. If a step fails you can retry just that step.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 TIMELINE -->
+<p class="lab">06 · AUDIO TIMELINE</p>
+<section class="screen" id="s6" data-step="5">
+  <div class="tl">
+    <div class="tlhead">
+      <div><span class="cap">Scene by scene · 03:42</span><h2 class="disp" style="margin-top:8px">The Lantern Keeper</h2></div>
+      <div class="legend"><span><span class="dot" style="background:var(--nar)"></span>Narration</span><span><span class="dot" style="background:var(--dia)"></span>Dialogue</span><span><span class="dot" style="background:var(--mus)"></span>Music</span><span><span class="dot" style="background:var(--sfx)"></span>Sound effects</span></div>
+      <div style="display:flex;gap:12px"><button class="btn btn-s"><i class="ph-fill ph-play"></i>Preview</button><button class="btn btn-p">Listen to the story<i class="ph ph-arrow-right"></i></button></div>
+    </div>
+    <div class="board">
+      <div class="lanes-l"><div></div><div><i class="ph ph-book-open-text"></i>Narration</div><div><i class="ph ph-chats-circle"></i>Dialogue</div><div><i class="ph ph-music-notes"></i>Music</div><div><i class="ph ph-waveform"></i>Effects</div></div>
+      <div class="grid" id="tlgrid">
+        <div class="ruler"><div><b>01 · The climb</b><span class="mono">00:00</span></div><div><b>02 · The storm</b><span class="mono">00:52</span></div><div><b>03 · The singing</b><span class="mono">01:58</span></div><div><b>04 · First light</b><span class="mono">02:57</span></div></div>
+        <div class="trk" id="r-nar"></div><div class="trk" id="r-dia"></div><div class="trk" id="r-mus"></div><div class="trk" id="r-sfx"></div>
+        <span class="sep" style="left:23.42%"></span><span class="sep" style="left:53.15%"></span><span class="sep" style="left:79.73%"></span>
+        <span class="playhead" style="left:33.8%"></span>
+      </div>
+    </div>
+    <div class="panel inspector">
+      <span class="sw"><i class="ph ph-cloud-lightning"></i></span>
+      <div><b>Thunder</b><small>Scene 2 · starts 01:12 · 4 s · “long before the thunder did”</small></div>
+      <div class="r"><span class="hint" style="margin:0">Volume</span><div class="slider" style="width:140px"><i style="width:70%"></i><u style="left:70%"></u></div><button class="btn btn-s btn-sm"><i class="ph ph-swap"></i>Swap clip</button><button class="btn btn-g btn-sm"><i class="ph ph-trash"></i>Remove</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 PLAYER -->
+<p class="lab">07 · PLAYER</p>
+<section class="screen" id="s7" data-step="6">
+  <div class="player">
+    <div class="pmain">
+      <div class="glow"></div>
+      <span class="onair" style="align-self:flex-start"><span class="dot"></span>NOW PLAYING</span>
+      <h1 class="disp ptitle">The Lantern Keeper</h1>
+      <div class="nowp"><span>Scene 2 · The storm</span><span>·</span><span>Fantasy</span><span>·</span><span>4 voices</span></div>
+      <div class="lyric">
+        <p><span class="spk">Narrator</span>Rain hammered the glass. The door at the foot of the tower banged open, then shut.</p>
+        <p class="cur"><span class="spk">Old Tomas · memory</span>“Keep it lit, whatever comes. Ships are counting on it.”</p>
+        <p><span class="spk">Narrator</span>Mira wiped the lens and turned the wick up high.</p>
+      </div>
+      <div class="bigwave"><div class="wave" data-n="180" data-s="31" data-prog="0.34"></div></div>
+      <div class="markers"><span style="left:0">01 The climb</span><span style="left:23.4%">02 The storm</span><span style="left:53.2%">03 The singing</span><span style="left:79.7%">04 First light</span></div>
+      <div class="trans">
+        <span class="sk"><i class="ph-fill ph-skip-back"></i></span>
+        <span class="pp"><i class="ph-fill ph-pause"></i></span>
+        <span class="sk"><i class="ph-fill ph-skip-forward"></i></span>
+        <span class="time"><b>01:15</b> / 03:42</span>
+        <div class="r"><button class="btn btn-s"><i class="ph ph-sliders-horizontal"></i>Edit timeline</button><button class="btn btn-p"><i class="ph ph-download-simple"></i>Download</button></div>
+      </div>
+    </div>
+    <aside class="chap">
+      <span class="cap" style="margin:0 12px 8px">Scenes</span>
+      <div class="ch"><span class="num">01</span><div><b>The climb</b><small>Calm</small></div><span class="mono">0:52</span></div>
+      <div class="ch on"><span class="num">02</span><div><b>The storm</b><small>Tense</small></div><span class="mono">1:06</span><span class="bar"><i style="width:35%"></i></span></div>
+      <div class="ch"><span class="num">03</span><div><b>The singing</b><small>Mysterious</small></div><span class="mono">0:59</span></div>
+      <div class="ch"><span class="num">04</span><div><b>First light</b><small>Hopeful</small></div><span class="mono">0:45</span></div>
+      <div class="castmini"><span class="cap">Cast</span>
+        <div class="avs"><span class="av" style="background:var(--nar)">N</span><span class="av" style="background:var(--acc)">M</span><span class="av speaking" style="background:var(--mus)">T</span><span class="av" style="background:var(--sfx)">S</span></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 8 EXPORT -->
+<p class="lab">08 · EXPORT / SHARE</p>
+<section class="screen" id="s8" data-step="7">
+  <div class="ex">
+    <div class="cover"><div class="rays"></div>
+      <span class="cap" style="position:relative">A VoiceVerse audio story</span>
+      <div><div class="disp">The Lantern<br>Keeper</div><div class="wave" data-n="64" data-s="41" style="margin-top:32px"></div></div>
+      <div class="meta"><span>03:42</span><span>4 scenes · 4 voices</span></div>
+    </div>
+    <div class="opts">
+      <div><span class="cap">Your story is ready</span><h1 class="disp" style="font-size:var(--t8);margin-top:12px">Take it with you</h1></div>
+      <div class="fmt">
+        <div class="on"><span class="radio"></span><div><b>MP3</b><small>Best for sharing and phones</small></div><span class="mono">3.5 MB</span></div>
+        <div><span class="radio"></span><div><b>WAV</b><small>Full quality, for editing</small></div><span class="mono">37 MB</span></div>
+      </div>
+      <button class="btn btn-p btn-l" style="justify-content:center"><i class="ph ph-download-simple"></i>Download MP3</button>
+      <div><span class="cap">Share a link</span>
+        <div class="share" style="margin-top:12px"><span class="url"><i class="ph ph-link"></i>voiceverse.app/s/lantern-keeper</span><button class="btn btn-s"><i class="ph ph-copy"></i>Copy link</button></div>
+        <p class="hint">Anyone with the link can listen. No sign-in needed.</p>
+      </div>
+      <div class="more">
+        <div class="panel"><i class="ph ph-scroll"></i><div><b>Copy script</b><small>The full script, every line by speaker</small></div></div>
+        <div class="panel"><i class="ph ph-plus-circle"></i><div><b>Make another</b><small>Start a new story</small></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 MOBILE -->
+<p class="lab" style="width:390px;max-width:390px">09 · PLAYER ON PHONE (390)</p>
+<section class="screen m" id="s9">
+  <div class="mtop"><div class="logo"><span class="mk"><i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i><i style="height:20px"></i><i style="height:6px"></i></span>VoiceVerse</div><i class="ph ph-dots-three-outline" style="font-size:22px"></i></div>
+  <div class="art"><div class="rays"></div><span class="cap">Scene 2 · The storm</span><div class="disp">The Lantern Keeper</div></div>
+  <div class="mly"><span class="spk">Old Tomas · memory</span><p>“Keep it lit, whatever comes. Ships are counting on it.”</p></div>
+  <div class="mw"><div class="wave" data-n="64" data-s="31" data-prog="0.34"></div></div>
+  <div class="mt"><span>01:15</span><span>03:42</span></div>
+  <div class="mctrl"><i class="ph-fill ph-skip-back sk"></i><span class="pp"><i class="ph-fill ph-pause"></i></span><i class="ph-fill ph-skip-forward sk"></i></div>
+  <div class="mscn"><span class="on2">01</span><span class="cur2">02 The storm</span><span>03</span><span>04</span></div>
+  <div class="mbar"><div class="on"><i class="ph-fill ph-headphones"></i>Listen</div><div><i class="ph ph-list-numbers"></i>Scenes</div><div><i class="ph ph-download-simple"></i>Download</div></div>
+</section>
+
+<script>
+// shared top bar for app screens
+const STEPS=['Story','Analysis','Voices','Build','Timeline','Listen','Export'];
+document.querySelectorAll('.screen[data-step]').forEach(s=>{
+  const on=+s.dataset.step;
+  const h=document.createElement('header');h.className='top';
+  h.innerHTML=`<div class="logo"><span class="mk"><i style="height:10px"></i><i style="height:20px"></i><i style="height:14px"></i><i style="height:24px"></i><i style="height:8px"></i></span>VoiceVerse</div>
+  <nav class="steps">${STEPS.map((t,i)=>{const n=i+1;const c=n<on?'done':n===on?'on':'';return `<span class="${c}"><b>${c==='done'?'✓':n}</b>${t}</span>`}).join('')}</nav>
+  <div class="r"><span class="chip"><i class="ph ph-floppy-disk"></i>Saved on this laptop</span></div>`;
+  s.prepend(h);
+});
+// deterministic waveform
+function rnd(seed){let x=seed*9301+49297;return()=>{x=(x*9301+49297)%233280;return x/233280}}
+document.querySelectorAll('.wave[data-n]').forEach(w=>{
+  const n=+w.dataset.n,r=rnd(+w.dataset.s||1),lo=w.dataset.lo,prog=+w.dataset.prog||0;let h='';
+  for(let i=0;i<n;i++){const env=Math.sin(Math.PI*(i+.5)/n)*.5+.5;let v=lo?.35+r()*.3:(.18+r()*.82)*(.55+env*.45);
+    h+=`<i class="${i/n<prog?'p':''}" style="height:${Math.round(v*100)}%"></i>`}
+  w.innerHTML=h;
+});
+// timeline blocks (percent of total 222 s)
+const T=222,p=s=>s/T*100;
+const blocks={
+ nar:[[0,28,'“The wind came off the sea…”'],[52,84,'“Rain hammered the glass…”'],[118,148,'“Then, inside the storm…”'],[177,206,'“The lamp held…”']],
+ dia:[[28,44,'Tomas'],[84,104,'Mira: “Not tonight.”'],[148,176,'Storm Spirit'],[206,222,'Mira']],
+ mus:[[0,52,'Soft strings · calm'],[52,118,'Low drums · tense'],[118,177,'Choir pad · mysterious'],[177,222,'Rising piano · hopeful']],
+ sfx:[[2,14,'Wind'],[18,30,'Steps'],[56,68,'Rain'],[72,84,'Thunder',1],[94,106,'Door'],[126,140,'Magic'],[180,192,'Birds'],[200,212,'Waves']]
+};
+let seed=50;
+for(const k in blocks){const row=document.getElementById('r-'+k);blocks[k].forEach(([a,b,t,sel])=>{
+  const d=document.createElement('div');d.className='b '+k+(sel?' sel':'');d.style.left=p(a)+'%';d.style.width=`calc(${p(b-a)}% - 4px)`;
+  d.innerHTML=`<span>${t}</span>`+(k==='sfx'?'':`<div class="wave" data-n="${Math.max(6,Math.round((b-a)*1.2))}"></div>`);row.appendChild(d);
+  const w=d.querySelector('.wave');if(w){const r=rnd(seed++);let h='';for(let i=0;i<+w.dataset.n;i++){const v=k==='mus'?.3+r()*.35:.2+r()*.8;h+=`<i style="height:${Math.round(v*100)}%"></i>`}w.innerHTML=h}
+})}
+// solo mode
+const q=new URLSearchParams(location.search).get('s');
+if(q){document.body.classList.add('solo');document.querySelectorAll('.screen').forEach(s=>{if(s.id!=='s'+q)s.remove()});document.querySelectorAll('.lab').forEach(l=>l.remove())}
+</script>
+</body>
+</html>

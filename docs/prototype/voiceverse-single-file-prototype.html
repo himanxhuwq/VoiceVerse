@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoiceVerse</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28' fill='%23FF5A36'><rect x='0' y='8.5' width='4' height='11' rx='2'/><rect x='6' y='3.0' width='4' height='22' rx='2'/><rect x='12' y='6.5' width='4' height='15' rx='2'/><rect x='18' y='1.0' width='4' height='26' rx='2'/><rect x='24' y='9.5' width='4' height='9' rx='2'/></svg>">
+<meta name="description" content="Turn any written story into a cinematic audio experience: narrator, character voices, music and sound effects.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* VoiceVerse design tokens
+   Type: Big Shoulders Display (display caps) · Schibsted Grotesk (UI) · IBM Plex Mono (labels, time)
+   Scale: major third 1.25 on 16 → 12.8 · 16 · 20 · 25 · 31.25 · 39 · 48.8 · 61 · 76.3
+   Space: 4pt → 4 8 12 16 24 32 48 64 · Radius: 12 panels, 8 controls, pill chips
+   Contrast on --bg: --tx 17.1:1 · --mu 7.9:1 · --acc 6.6:1 · ink on --acc 6.6:1 */
+:root{
+  --bg:#0D0F14; --s1:#151821; --s2:#1C2029; --s3:#262B37; --line:#2B303C; --line2:#3A404E;
+  --tx:#F3EFE6; --mu:#A3A9B6; --acc:#FF5A36; --acc-ink:#1A0A05; --acc-t:rgba(255,90,54,.14);
+  --nar:#E9E3D6; --dia:#FF5A36; --mus:#6FC3B2; --sfx:#F4C04E; --bad:#FF7A7A;
+  --f-d:'Big Shoulders Display',sans-serif; --f-b:'Schibsted Grotesk',system-ui,sans-serif; --f-m:'IBM Plex Mono',ui-monospace,monospace;
+  --t1:12.8px; --t2:16px; --t3:20px; --t4:25px; --t5:31.25px; --t6:39px; --t7:48.8px; --t8:61px; --t9:76.3px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--tx)}
+body{font-family:var(--f-b);font-size:var(--t2);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.45}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.mono{font-family:var(--f-m)}
+.cap{font:500 var(--t1)/1.2 var(--f-m);letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.disp{font-family:var(--f-d);font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:.005em}
+.hint{font-size:13px;color:var(--mu)}
+.hidden{display:none!important}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 24px;border-radius:8px;font-weight:600;white-space:nowrap;transition:filter .15s,transform .1s}
+.btn:hover:not(:disabled){filter:brightness(1.12)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn-p{background:var(--acc);color:var(--acc-ink)}
+.btn-s{background:var(--s2);border:1px solid var(--line2)}
+.btn-g{color:var(--mu)} .btn-g:hover{color:var(--tx)}
+.btn-l{height:56px;padding:0 32px;font-size:var(--t3)}
+.btn-sm{height:36px;padding:0 14px;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-size:13px;font-weight:500;white-space:nowrap}
+button.chip{cursor:pointer} button.chip.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.panel{background:var(--s1);border:1px solid var(--line);border-radius:12px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:800 var(--t3)/1 var(--f-d);color:var(--acc-ink);flex:none;text-transform:uppercase}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#main>*{animation:fadein .3s ease}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* top bar */
+.top{height:72px;flex:none;display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--line);gap:24px;position:sticky;top:0;background:rgba(13,15,20,.92);backdrop-filter:blur(8px);z-index:20}
+.logo{display:flex;align-items:center;gap:10px;font:900 var(--t4)/1 var(--f-d);text-transform:uppercase;letter-spacing:.02em;cursor:pointer}
+.mk{display:flex;gap:2px;align-items:center;height:24px}
+.mk i{display:block;width:4px;border-radius:2px;background:var(--acc)}
+.steps{display:flex;gap:4px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.steps button{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--mu);white-space:nowrap}
+.steps button b{font:600 12px var(--f-m);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line2)}
+.steps button.done b{background:var(--s3);border-color:var(--s3);color:var(--tx)}
+.steps button.on{background:var(--s2);color:var(--tx)}
+.steps button.on b{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.mode{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);font-size:13px;font-weight:500;white-space:nowrap}
+.mode .dot{background:var(--sfx)} .mode.live .dot{background:var(--mus)}
+
+#main{flex:1;display:flex;flex-direction:column;width:100%;max-width:1440px;margin:0 auto}
+.wrap{padding:32px 48px 48px;display:flex;flex-direction:column;gap:24px;flex:1}
+.h1{font-size:var(--t8)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.head .acts{display:flex;gap:12px;flex-wrap:wrap}
+
+/* home */
+.hero{flex:1;display:grid;grid-template-columns:minmax(0,640px) 1fr;gap:64px;padding:48px 48px 0 96px;align-items:center}
+.hero h1{font-size:clamp(56px,7vw,95px);margin:24px 0}
+.hero h1 em{font-style:normal;color:var(--acc)}
+.lede{font-size:var(--t3);color:var(--mu);max-width:32ch;line-height:1.45}
+.ctas{display:flex;gap:16px;margin-top:40px;align-items:center;flex-wrap:wrap}
+.onair{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--f-m);letter-spacing:.1em;color:var(--acc);border:1px solid rgba(255,90,54,.4);padding:6px 12px;border-radius:999px}
+.onair .dot{background:var(--acc);box-shadow:0 0 0 4px rgba(255,90,54,.18)}
+.onair.live .dot{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 7px rgba(255,90,54,.05)}}
+.stage{position:relative;height:560px}
+.page{position:absolute;left:0;top:16px;width:380px;background:var(--nar);color:#1B1A17;border-radius:12px;padding:32px;transform:rotate(-3deg);box-shadow:0 32px 64px rgba(0,0,0,.5)}
+.page .cap{color:#5E5A52}
+.page h4{font:800 var(--t5)/1 var(--f-d);text-transform:uppercase;margin:12px 0 16px}
+.page p{font-size:15px;line-height:1.65;margin-bottom:12px}
+.page mark{background:none;padding:0 2px;border-bottom:3px solid}
+.mixer{position:absolute;right:0;bottom:24px;width:min(460px,100%);padding:24px;border-radius:12px;background:var(--s1);border:1px solid var(--line2);box-shadow:0 32px 64px rgba(0,0,0,.55)}
+.lane{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:12px;height:40px}
+.lane .ln{font:500 12px var(--f-m);letter-spacing:.06em;color:var(--mu);text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.lane .tr{position:relative;height:28px;border-radius:6px;background:var(--s2)}
+.lane .blk{position:absolute;top:0;bottom:0;border-radius:6px;overflow:hidden;padding:0 4px}
+.mwave{display:flex;align-items:center;gap:2px;height:100%}
+.mwave i{display:block;flex:1;border-radius:2px;background:rgba(13,15,20,.45)}
+.howrow{display:grid;grid-template-columns:repeat(4,1fr);margin:24px 48px 0 96px;border-top:1px solid var(--line);padding:24px 0 32px}
+.howrow div{display:flex;gap:12px;align-items:baseline;padding-right:24px}
+.howrow b{font:600 13px var(--f-m);color:var(--acc)}
+.howrow span{font-weight:600}
+.howrow small{display:block;color:var(--mu);font-size:14px;font-weight:400}
+
+/* story */
+.split{display:grid;grid-template-columns:1fr 380px;gap:32px;flex:1}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--s1);border:1px solid var(--line);border-radius:12px;width:max-content;max-width:100%;overflow-x:auto}
+.tabs button{display:flex;gap:8px;align-items:center;height:40px;padding:0 16px;border-radius:8px;font-size:15px;font-weight:500;color:var(--mu);white-space:nowrap}
+.tabs button.on{background:var(--s3);color:var(--tx)}
+.editor{display:flex;flex-direction:column;min-height:480px}
+.editor textarea{flex:1;width:100%;resize:none;background:transparent;border:0;padding:28px 36px;font-size:17px;line-height:1.75;outline:none;min-height:360px}
+.editor textarea::placeholder{color:#6E7482}
+.editor .ft{display:flex;align-items:center;gap:16px;padding:14px 24px;border-top:1px solid var(--line);flex-wrap:wrap}
+.meter{width:160px;height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--mus);border-radius:3px;transition:width .2s}
+.meter.warn i{background:var(--sfx)} .meter.bad i{background:var(--bad)}
+.drop{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:2px dashed var(--line2);border-radius:12px;margin:24px;padding:48px;text-align:center;color:var(--mu)}
+.drop.over{border-color:var(--acc);background:var(--acc-t)}
+.drop .ph{font-size:48px;color:var(--tx)}
+.side{display:flex;flex-direction:column;gap:16px}
+.side .panel{padding:24px}
+.field{margin-bottom:20px} .field:last-child{margin-bottom:0}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.inp{width:100%;height:48px;padding:0 16px;border-radius:8px;background:var(--s2);border:1px solid var(--line2);font-size:15px;outline:none}
+.inp:focus{border-color:var(--acc)}
+select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);background-position:calc(100% - 22px) 21px,calc(100% - 16px) 21px;background-size:6px 6px;background-repeat:no-repeat;padding-right:40px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--mu);padding:6px 0}
+.check .ph-fill{color:var(--mus)}
+.err{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:8px;background:rgba(255,122,122,.1);border:1px solid rgba(255,122,122,.35);color:#FFD2D2;font-size:14px}
+.err .ph{color:var(--bad);font-size:18px;margin-top:1px}
+.note{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:8px;background:rgba(244,192,78,.08);border:1px solid rgba(244,192,78,.3);font-size:14px;color:#F4E3B8}
+.note .ph{color:var(--sfx);font-size:18px;margin-top:1px}
+
+/* analysis */
+.facts{display:grid;grid-template-columns:180px 180px 1fr 260px;gap:16px}
+.fact{padding:20px 24px}
+.fact .v{font:800 var(--t6)/1 var(--f-d);text-transform:uppercase;margin-top:12px}
+.arc{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.arc .ph{color:var(--mu);font-size:14px}
+.ancols{display:grid;grid-template-columns:1fr 400px;gap:24px;align-items:start}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.scene{padding:20px 24px;display:flex;flex-direction:column;gap:10px}
+.scene .sr{display:flex;justify-content:space-between;align-items:center}
+.scene h4{font:800 var(--t4)/1 var(--f-d);text-transform:uppercase}
+.scene p{font-size:14px;color:var(--mu);line-height:1.55}
+.cues{display:flex;gap:8px;flex-wrap:wrap}
+.cast{padding:24px}
+.person{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.person:first-of-type{border-top:0}
+.person input{background:transparent;border:0;border-bottom:1px dashed transparent;font-weight:600;font-size:16px;width:100%;outline:none;padding:2px 0}
+.person input:hover,.person input:focus{border-bottom-color:var(--line2)}
+.person small{color:var(--mu);font-size:13px;display:block}
+.person .n{font:500 13px var(--f-m);color:var(--mu);text-align:right}
+.mood-tense{border-color:var(--acc)!important;color:var(--acc)}
+
+/* voices */
+.vs{display:grid;grid-template-columns:320px 1fr;flex:1}
+.castlist{border-right:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:8px}
+.ci{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:12px;border:1px solid transparent;text-align:left;width:100%}
+.ci:hover{background:var(--s1)}
+.ci.on{background:var(--s1);border-color:var(--line2)}
+.ci b{display:block;font-size:15px}.ci small{color:var(--mu);font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.vmain{padding:32px 48px;display:flex;flex-direction:column;gap:24px;min-width:0}
+.who{display:flex;gap:20px;align-items:center}
+.who .av{width:72px;height:72px;font-size:var(--t6)}
+.voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.voice{padding:14px 16px;border-radius:12px;background:var(--s1);border:1px solid var(--line);display:grid;grid-template-columns:40px 1fr;gap:14px;align-items:center;text-align:left;width:100%}
+.voice:hover{border-color:var(--line2)}
+.voice.on{border-color:var(--acc);background:linear-gradient(var(--acc-t),var(--acc-t)),var(--s1)}
+.voice b{font-size:15px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice small{font-size:13px;color:var(--mu);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.play{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--s3);font-size:16px;flex:none}
+.voice.on .play{background:var(--acc);color:var(--acc-ink)}
+.ctrls{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px}
+.ctrl{padding:20px 24px}
+.ctrl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.ctrl .row b{font-size:15px}
+.ends{display:flex;justify-content:space-between;font-size:12px;color:var(--mu);margin-top:10px;font-family:var(--f-m)}
+.emo{display:flex;flex-wrap:wrap;gap:8px}
+.emo .chip{height:32px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(var(--acc),var(--acc)) 0/var(--p,50%) 100% no-repeat,var(--s3)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--tx);margin-top:-7px;box-shadow:0 0 0 4px var(--bg)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--s3)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--acc)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--tx);border:0}
+.preview{display:flex;align-items:center;gap:20px;padding:20px 24px}
+.preview .play{width:52px;height:52px;background:var(--acc);color:var(--acc-ink);font-size:20px}
+.preview q{font-size:var(--t3);font-weight:500;flex:1;display:block;margin-top:6px}
+
+/* build */
+.gen-wrap{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:64px;padding:48px 96px;align-items:center}
+.ring{position:relative;width:min(400px,80vw);aspect-ratio:1;margin:auto}
+.ring svg{position:absolute;inset:0;width:100%;height:100%}
+.ring circle{transition:stroke-dashoffset .3s}
+.ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring .c .disp{font-size:var(--t9)}
+.pstep{display:grid;grid-template-columns:40px 1fr auto;gap:16px;align-items:center;padding:16px 0;border-top:1px solid var(--line)}
+.pstep:last-child{border-bottom:1px solid var(--line)}
+.pstep .ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:var(--s2);color:var(--mu)}
+.pstep.done .ic{background:rgba(111,195,178,.16);color:var(--mus)}
+.pstep.now .ic{background:var(--acc);color:var(--acc-ink)}
+.pstep.fail .ic{background:rgba(255,122,122,.18);color:var(--bad)}
+.pstep small{display:block;color:var(--mu);font-size:13px}
+.pstep .st{font:500 13px var(--f-m);color:var(--mu)}
+.pstep.now .st{color:var(--acc)} .pstep.fail .st{color:var(--bad)}
+.pstep.wait{opacity:.55}
+
+/* timeline */
+.legend{display:flex;gap:20px;font-size:13px;color:var(--mu);flex-wrap:wrap}
+.legend span{display:flex;gap:8px;align-items:center}
+.board{display:grid;grid-template-columns:120px 1fr;border-radius:12px;background:var(--s1);border:1px solid var(--line);overflow:hidden}
+.lanes-l{border-right:1px solid var(--line);display:grid;grid-template-rows:56px repeat(4,112px)}
+.lanes-l div{display:flex;align-items:center;gap:8px;padding:0 12px;font:500 12px var(--f-m);letter-spacing:.06em;text-transform:uppercase;color:var(--mu);border-top:1px solid var(--line)}
+.lanes-l div:first-child{border:0}
+.scroller{overflow-x:auto;position:relative}
+.grid{position:relative;display:grid;grid-template-rows:56px repeat(4,112px);min-width:100%}
+.ruler{position:relative}
+.ruler div{position:absolute;top:0;bottom:0;padding:10px 12px;border-left:1px solid var(--line);overflow:hidden;white-space:nowrap;cursor:pointer}
+.ruler b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis}
+.ruler .mono{font-size:12px;color:var(--mu)}
+.trk{position:relative;border-top:1px solid var(--line)}
+.sep{position:absolute;top:56px;bottom:0;width:1px;background:var(--line)}
+.b{position:absolute;top:14px;bottom:14px;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;overflow:hidden;color:#111;z-index:1;text-align:left;min-width:6px}
+.b span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
+.b .wv{position:absolute;left:6px;right:6px;bottom:6px;height:22px;display:flex;align-items:center;gap:2px}
+.b .wv i{flex:1;background:rgba(13,15,20,.28);border-radius:1px}
+.b.nar{background:var(--nar)} .b.dia{background:var(--dia)} .b.mus{background:var(--mus)} .b.sfx{background:var(--sfx);padding:6px 8px}
+.b.sfx.r0{top:10px;bottom:58px} .b.sfx.r1{top:58px;bottom:10px}
+.b.sel{outline:2px solid var(--tx);outline-offset:2px;z-index:2}
+.b.cur{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--acc)}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--tx);z-index:3;pointer-events:none}
+.playhead::before{content:"";position:absolute;top:0;left:-6px;width:14px;height:14px;background:var(--tx);border-radius:3px 3px 50% 50%}
+.inspector{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;padding:16px 24px}
+.sw{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:24px;color:#111}
+.inspector .r{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.inspector .tx{font-size:14px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* player */
+.player{flex:1;display:grid;grid-template-columns:1fr 380px}
+.pmain{padding:48px 64px 40px;display:flex;flex-direction:column;position:relative;min-width:0;overflow:hidden}
+.glow{position:absolute;left:-200px;top:-260px;width:900px;height:700px;background:radial-gradient(closest-side,rgba(255,90,54,.13),transparent);pointer-events:none}
+.ptitle{font-size:clamp(48px,6vw,92px);margin:16px 0 8px}
+.nowp{display:flex;gap:12px;align-items:center;color:var(--mu);flex-wrap:wrap}
+.lyric{margin:40px 0 32px;display:flex;flex-direction:column;gap:14px;max-width:860px;min-height:220px;justify-content:flex-end}
+.lyric p{font-size:var(--t4);line-height:1.35;color:#5D6370;font-weight:500}
+.lyric p.cur{color:var(--tx);font-size:var(--t5);font-weight:600}
+.lyric .spk{font:600 13px var(--f-m);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px}
+.lyric p.cur .spk{color:var(--acc)}
+.bigwave{height:96px;display:flex;align-items:center;gap:2px;cursor:pointer;margin-top:auto}
+.bigwave i{flex:1;border-radius:2px;background:var(--line2);min-width:1px}
+.bigwave i.p{background:var(--acc)}
+.markers{position:relative;height:28px;margin-top:8px}
+.markers button{position:absolute;top:0;font:500 12px var(--f-m);color:var(--mu);padding-left:8px;border-left:1px solid var(--line2);white-space:nowrap;max-width:24%;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.markers button:hover{color:var(--tx)}
+.trans{display:flex;align-items:center;gap:20px;margin-top:20px;flex-wrap:wrap}
+.pp{width:72px;height:72px;border-radius:50%;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center;font-size:30px;flex:none}
+.sk{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:var(--s2);border:1px solid var(--line)}
+.time{font:500 15px var(--f-m);color:var(--mu)} .time b{color:var(--tx);font-weight:500}
+.trans .r{margin-left:auto;display:flex;gap:12px;flex-wrap:wrap}
+.chap{border-left:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:8px;background:var(--s1)}
+.ch{display:grid;grid-template-columns:36px 1fr auto;gap:4px 12px;padding:14px 12px;border-radius:12px;align-items:center;text-align:left;width:100%}
+.ch:hover{background:var(--s2)}
+.ch .num{font:800 var(--t4)/1 var(--f-d);color:var(--mu)}
+.ch b{font-size:15px;display:block}.ch small{color:var(--mu);font-size:13px}
+.ch .mono{font-size:13px;color:var(--mu)}
+.ch.on{background:var(--s3)} .ch.on .num{color:var(--acc)}
+.ch .bar{grid-column:2/4;height:3px;border-radius:2px;background:var(--line2);overflow:hidden;margin-top:6px}
+.ch .bar i{display:block;height:100%;background:var(--acc)}
+.castmini{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--line)}
+.castmini .avs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.castmini .av{width:36px;height:36px;font-size:16px;transition:box-shadow .2s}
+.castmini .av.speaking{box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--acc)}
+
+/* export */
+.ex{flex:1;display:grid;grid-template-columns:minmax(0,480px) 1fr;gap:64px;padding:48px 96px;align-items:start}
+.cover{border-radius:12px;aspect-ratio:1;background:var(--s1);border:1px solid var(--line);position:relative;overflow:hidden;padding:40px;display:flex;flex-direction:column;justify-content:space-between}
+.cover .rays{position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(255,90,54,.35),transparent 55%),radial-gradient(circle at 20% 90%,rgba(111,195,178,.18),transparent 50%)}
+.cover .disp{font-size:clamp(44px,5vw,72px);position:relative}
+.cover .cw{height:64px;position:relative;display:flex;gap:2px;align-items:center;margin-top:28px}
+.cover .cw i{flex:1;background:rgba(243,239,230,.55);border-radius:2px}
+.cover .meta{position:relative;display:flex;justify-content:space-between;font:500 14px var(--f-m);color:var(--mu)}
+.opts{display:flex;flex-direction:column;gap:24px}
+.fmt{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fmt>button{padding:20px 24px;border-radius:12px;border:1px solid var(--line);background:var(--s1);display:grid;grid-template-columns:24px 1fr auto;gap:14px;align-items:center;text-align:left}
+.fmt>button.on{border-color:var(--acc);background:linear-gradient(var(--acc-t),var(--acc-t)),var(--s1)}
+.radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2)}
+.fmt .on .radio{border:6px solid var(--acc)}
+.fmt b{font-size:var(--t3);display:block}.fmt small{font-size:13px;color:var(--mu)}
+.more{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.more>button{padding:20px 24px;display:flex;gap:14px;align-items:center;text-align:left}
+.more .ph{font-size:24px;color:var(--mu)}
+.more b{display:block;font-size:15px}.more small{color:var(--mu);font-size:13px}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(5,6,9,.7);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .panel{width:min(560px,100%);padding:32px;max-height:90vh;overflow:auto}
+.modal h2{font-size:var(--t6);margin-bottom:8px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--tx);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;transition:.25s;z-index:60;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.empty{flex:1;display:grid;place-items:center;text-align:center;padding:64px 16px}
+.empty .ph{font-size:48px;color:var(--mu)}
+
+/* responsive */
+@media (max-width:1100px){
+  .hero{grid-template-columns:1fr;padding:32px 24px 0}
+  .stage{display:none}
+  .howrow{margin:24px 24px 0;grid-template-columns:1fr 1fr;gap:16px}
+  .split,.ancols,.player,.gen-wrap,.ex{grid-template-columns:1fr}
+  .facts{grid-template-columns:1fr 1fr}
+  .gen-wrap,.ex{padding:32px 24px;gap:32px}
+  .chap{border-left:0;border-top:1px solid var(--line)}
+}
+@media (max-width:860px){
+  .top{padding:0 16px;gap:12px;height:64px}
+  .top .logo span.word{display:none}
+  .steps button{padding:0 8px} .steps button span{display:none}
+  .mode span{display:none}
+  .wrap{padding:24px 16px 32px}
+  .h1{font-size:var(--t7)}
+  .vs{grid-template-columns:1fr}
+  .castlist{border-right:0;border-bottom:1px solid var(--line);padding:16px;flex-direction:row;overflow-x:auto}
+  .castlist .cap,.castlist .castfoot{display:none}
+  .ci{min-width:200px}
+  .vmain{padding:24px 16px}
+  .ctrls,.scenes,.fmt,.more{grid-template-columns:1fr}
+  .pmain{padding:24px 16px}
+  .lyric p{font-size:var(--t3)} .lyric p.cur{font-size:var(--t4)}
+  .lyric{min-height:180px;margin:24px 0}
+  .bigwave{height:64px}
+  .trans .r{margin-left:0;width:100%} .trans .r .btn{flex:1}
+  .inspector{grid-template-columns:auto 1fr}
+  .inspector .r{grid-column:1/-1}
+  .board{grid-template-columns:84px 1fr}
+  .lanes-l div{font-size:10px;padding:0 8px}
+  .lanes-l div i{display:none}
+  .editor textarea{padding:20px}
+}
+@media (max-width:520px){ .facts{grid-template-columns:1fr} .howrow{grid-template-columns:1fr} .cover{padding:24px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo" id="logo" role="link" tabindex="0" aria-label="VoiceVerse home"><span class="mk" aria-hidden="true"><i style="height:10px"></i><i style="height:20px"></i><i style="height:14px"></i><i style="height:24px"></i><i style="height:8px"></i></span><span class="word">VoiceVerse</span></div>
+  <nav class="steps" id="steps" aria-label="Steps"></nav>
+  <button class="mode" id="modeBtn" title="AI keys and settings"><span class="dot"></span><span id="modeTxt">Demo mode</span><i class="ph ph-gear-six"></i></button>
+</header>
+<main id="main"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal hidden" id="settings" role="dialog" aria-modal="true" aria-labelledby="setH"></div>
+
+<script>
+/* =========================================================
+   VoiceVerse: working front-end
+   - Story reader: Gemini (with key) or the built-in reader
+   - Voices: ElevenLabs (with key) or the browser's own voices
+   - Music + sound effects: synthesised live with Web Audio
+   - Mix: rendered offline into one track (WAV / MP3)
+   ========================================================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmtT=x=>{x=Math.max(0,x||0);return String(Math.floor(x/60)).padStart(2,'0')+':'+String(Math.floor(x%60)).padStart(2,'0')};
+const words=t=>(t.trim().match(/\S+/g)||[]).length;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2200)}
+
+/* ---------- sample stories (demo content) ---------- */
+const SAMPLES=[
+{title:'The Lantern Keeper',text:`The wind came off the sea long before the thunder did. Mira climbed the last stair of the lighthouse, the lantern swinging in her hand, and set it down beside the great dark lens.
+
+"Keep it lit, whatever comes," old Tomas had told her that morning, coughing into his sleeve. "Ships are counting on it. So am I."
+
+By dusk the sky had turned the colour of a bruise. Rain hammered the glass. Below, the waves rose black and white against the rocks, and the door at the foot of the tower banged open, then shut, then open again.
+
+"Not tonight," Mira whispered, turning the wick up high. "You won't put it out tonight."
+
+Then, somewhere inside the storm, a voice that was not the wind began to sing. It was low and strange and very old, and the lantern flame bent towards it like a flower towards the sun.
+
+"Little keeper," sang the Storm Spirit, "why do you guard a fire that is not yours? Let it sleep. Come down to the water."
+
+Mira's hands shook, but she did not let go. "It is mine," she said. "Tomas gave it to me. And there are people out there who need to find the shore."
+
+The Storm Spirit laughed, and the thunder laughed with it. Lightning cracked across the sky. For a long moment the whole tower trembled, and the flame shrank to a single blue spark.
+
+Mira cupped it in her hands and breathed on it, softly, the way Tomas had shown her. The spark caught. The flame grew. The great lens turned, and its beam swept out across the angry sea.
+
+Far away, a ship's horn answered.
+
+By morning the storm had gone. Gulls wheeled over the bright, calm water, and Tomas came slowly up the stairs, smiling.
+
+"You kept it lit," he said.
+
+"I kept it lit," said Mira.`},
+{title:'The Clockwork Fox',text:`In the market town of Brill, where every chimney smoked and every bell had a name, there lived a clockmaker called Ada and a fox made of brass.
+
+The fox ticked when it walked. Tick, tick, tick, across the workshop floor, between the cogs and the candle stubs.
+
+"You're late again," Ada said, not looking up from her bench.
+
+"The bells were ringing," said the fox. "I stopped to count them. There were nine, but the tower only has eight."
+
+Ada put down her tiny screwdriver. She knew every bell in Brill. The ninth one was not supposed to exist.
+
+That night they crept out together through the crowd of the late market, past the fire-eaters and the cheering children, to the foot of the old clock tower. The door was locked, but the fox slipped its brass tail into the keyhole and turned it with a click.
+
+Inside, the stairs went up and up. At the very top, hanging in the dark, was a small silver bell that glowed like the moon.
+
+"Who made you?" Ada whispered.
+
+The bell rang once, softly, and a voice like falling snow answered. "Someone who wanted to be remembered. Will you remember me?"
+
+The fox looked at Ada. Ada looked at the fox.
+
+"We will," said Ada. "Every hour."
+
+And from that night on, the clock tower of Brill rang nine times at nine o'clock, and everyone in town was sure it always had.`}];
+
+/* ---------- state ---------- */
+const MOODS=['calm','tense','mysterious','hopeful','sad','happy','epic'];
+const SFX_TYPES={rain:'Rain',thunder:'Thunder',wind:'Wind',door:'Door',knock:'Knock',steps:'Footsteps',waves:'Waves',birds:'Birds',magic:'Magic',fire:'Fire',bell:'Bell',sword:'Sword',crowd:'Crowd',horse:'Horse',heartbeat:'Heartbeat',clock:'Clock tick',horn:'Ship horn'};
+const SFX_ICON={rain:'cloud-rain',thunder:'cloud-lightning',wind:'wind',door:'door-open',knock:'hand-fist',steps:'footprints',waves:'waves',birds:'bird',magic:'sparkle',fire:'fire',bell:'bell',sword:'sword',crowd:'users-three',horse:'horse',heartbeat:'heartbeat',clock:'clock',horn:'megaphone'};
+const COLORS=['var(--nar)','var(--acc)','var(--mus)','var(--sfx)','#B9A6FF','#7FB2FF','#FF9EC4','#9BE37A'];
+const STEPS=[['story','Story'],['analysis','Analysis'],['voices','Voices'],['build','Build'],['timeline','Timeline'],['player','Listen'],['export','Export']];
+
+let S={view:'home',title:'',text:'',lang:'en',genreHint:'auto',tab:'paste',an:null,cast:{},sel:null,built:false,fmt:'mp3',selBlock:null,engine:null};
+const store=(()=>{try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return localStorage}catch(e){return null}})();
+function save(){if(!store)return;try{const {view,title,text,lang,genreHint,an,cast,sel,fmt}=S;store.setItem('vv-state',JSON.stringify({view,title,text,lang,genreHint,an,cast,sel,fmt}))}catch(e){}}
+function load(){try{const j=JSON.parse(store?.getItem('vv-state')||'null');if(j)Object.assign(S,j)}catch(e){}S.view='home'} // always open on the home page; a saved story can be resumed from there
+const KEYS={get(k){try{return sessionStorage.getItem(k)||store?.getItem(k)||''}catch(e){return ''}},
+  set(k,v,remember){try{sessionStorage.setItem(k,v);if(remember&&v)store?.setItem(k,v);else store?.removeItem(k)}catch(e){}}};
+const cfg=()=>({gem:KEYS.get('vv-gem'),gemModel:KEYS.get('vv-gem-model')||'gemini-2.5-flash',el:KEYS.get('vv-el'),elModel:KEYS.get('vv-el-model')||'eleven_multilingual_v2'});
+const useEleven=()=>!!cfg().el, useGemini=()=>!!cfg().gem;
+
+/* =========================================================
+   BUILT-IN STORY READER
+   ========================================================= */
+const VERBS='said|says|asked|told|whispered|shouted|called|cried|replied|answered|muttered|murmured|sang|yelled|hissed|laughed|added|warned|snapped|sighed|begged|growled|breathed|announced|declared|exclaimed|insisted|explained|demanded|screamed|roared|giggled|grumbled|admitted|promised|wondered';
+const STOP=new Set('The A An And But Then By At In On Of For From To It Its He She They We I You His Her Their Our My Your This That These Those When While After Before Far Below Above Inside Outside Somewhere Every Each All No Not Yes One Two Three Far Little Old Young There Here Who What Why How Where Mr Mrs Ms Dr Sir Lady Lord So Now Once Later Soon Suddenly Still Even Just Only As If Or Nor Yet With Without Through Across Over Under Into Onto Upon Around Behind Beside Between Beyond During Until Toward Towards Along Against Among'.split(' '));
+const SFX_WORDS={rain:['rain','raindrops','drizzle','downpour','rained','raining'],thunder:['thunder','lightning'],wind:['wind','gust','breeze','gale','winds'],door:['door','gate','doors'],knock:['knock','knocked','knocking'],steps:['footsteps','footstep','stairs','stair','steps','walked','ran','climbed','crept','marched'],waves:['waves','wave','sea','ocean','shore','tide','surf'],birds:['birds','bird','gulls','gull','sparrow','crows','owl'],magic:['magic','spell','glowed','glow','glowing','shimmer','sparkle','enchanted','wand','spark'],fire:['fire','flame','flames','campfire','torch','hearth','fire-eaters','candle'],bell:['bell','bells','chime','rang','ringing'],sword:['sword','blade','clash','swords','steel'],crowd:['crowd','market','cheering','people','crowds'],horse:['horse','hooves','gallop','galloped','horses'],heartbeat:['heartbeat','pounding'],clock:['clock','tick','ticked','ticking'],horn:['horn']};
+const SFX_DUR={rain:9,thunder:4.5,wind:8,door:1.6,knock:1.2,steps:3.2,waves:9,birds:6,magic:2.6,fire:7,bell:3.5,sword:1.4,crowd:6,horse:4,heartbeat:5,clock:4,horn:4};
+const MOOD_WORDS={tense:['storm','dark','scream','fear','afraid','danger','chase','shadow','blood','trembl','panic','crash','monster','attack','shook','angry','lightning','thunder','hammer','locked','crept'],mysterious:['strange','whisper','voice','magic','fog','mist','secret','hidden','ancient','sing','sang','glow','spirit','ghost','moon','silver','exist'],hopeful:['dawn','morning','sun','smil','hope','safe','warm','bright','calm','answered','grew','remember'],sad:['tears','cry','wept','alone','lost','grief','goodbye','died','sorrow','lonely'],happy:['laugh','joy','danc','celebrat','happy','cheer','grin','delight'],epic:['battle','army','king','dragon','war','charge','sword','roar','hero','legend']};
+const GENRES={Fantasy:['magic','dragon','spell','spirit','kingdom','wizard','witch','fairy','enchant','clockwork','clockmaker','glowed','made of brass'],'Sci-fi':['spaceship','planet','robot','space','laser','galaxy','android'],Mystery:['detective','clue','murder','suspect','missing'],Horror:['ghost','corpse','haunt','scream','blood'],Adventure:['map','treasure','journey','island','quest','pirate'],'Fairy tale':['once upon','princess','prince','castle']};
+function countHits(text,list){const t=text.toLowerCase();return list.reduce((n,w)=>n+(t.split(w).length-1),0)}
+function guessMood(text){let best='calm',bs=1;for(const m in MOOD_WORDS){const s=countHits(text,MOOD_WORDS[m]);if(s>bs){bs=s;best=m}}return best}
+function guessGenre(text){let best='Drama',bs=0;for(const g in GENRES){const s=countHits(text,GENRES[g]);if(s>bs){bs=s;best=g}}return best}
+const cap1=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+function localAnalyse(text,title){
+  const paras=text.replace(/\r/g,'').split(/\n\s*\n|\n(?=\s*["“])/).map(p=>p.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const qre=/“([^”]+)”|"([^"]+)"/g, vre=new RegExp(`^(?:${VERBS})$`,'i');
+  // pass 1: segments + explicit speakers
+  const segs=[]; // {pi, kind:'q'|'n', text, speaker, pron}
+  paras.forEach((p,pi)=>{
+    let last=0,m;qre.lastIndex=0;
+    while((m=qre.exec(p))){
+      if(m.index>last)segs.push({pi,kind:'n',text:p.slice(last,m.index).trim(),pos:last});
+      segs.push({pi,kind:'q',text:(m[1]||m[2]).trim(),after:p.slice(qre.lastIndex,qre.lastIndex+90),before:p.slice(Math.max(0,m.index-110),m.index),pos:m.index});
+      last=qre.lastIndex;
+    }
+    if(last<p.length)segs.push({pi,kind:'n',text:p.slice(last).trim(),pos:last});
+  });
+  const V=`(?:${VERBS})`;
+  const named=new Map(); // name -> count
+  const norm=n=>{n=n.replace(/'s$/,'').trim();return n.split(' ').map(cap1).join(' ')};
+  segs.forEach(s=>{
+    if(s.kind!=='q')return;
+    const a=s.after,b=s.before;let r;
+    if((r=a.match(new RegExp(`^\\s*[,.!?]?\\s*(?:(?:old|young|little|poor|the)\\s+)?([A-Z][a-z]+(?:\\s[A-Z][a-z]+)?)\\s+(?:had\\s+|has\\s+)?${V}\\b`)))) s.speaker=norm(r[1]);
+    else if((r=a.match(new RegExp(`^\\s*[,.!?]?\\s*${V}\\s+(?:old\\s+|young\\s+|little\\s+)?(?:the\\s+)?([A-Z][a-z]+(?:\\s[A-Z][a-z]+)?)\\b`)))) s.speaker=norm(r[1]);
+    else if((r=a.match(new RegExp(`^\\s*[,.!?]?\\s*${V}\\s+the\\s+([a-z]+)\\b`)))) s.speaker=norm(r[1]);
+    else if((r=a.match(new RegExp(`^\\s*[,.!?]?\\s*the\\s+([a-z]+)\\s+${V}\\b`)))) s.speaker=norm(r[1]);
+    else if((r=a.match(new RegExp(`^\\s*[,.!?]?\\s*(he|she|they|i|it)\\s+${V}\\b`,'i')))) s.pron=r[1].toLowerCase();
+    else if((r=b.match(new RegExp(`([A-Z][a-z]+(?:\\s[A-Z][a-z]+)?)\\s+${V}[,:.]?\\s*$`)))) s.speaker=norm(r[1]);
+    else if((r=b.match(new RegExp(`\\b(?:the|a|an)\\s+([a-z]+)\\b[^.!?"“”]{0,32}\\b${V}[,:.]?\\s*$`)))) s.speaker=norm(r[1]);
+    if(s.speaker&&STOP.has(s.speaker.split(' ')[0]))s.speaker=null;
+    if(s.speaker)named.set(s.speaker,(named.get(s.speaker)||0)+1);
+  });
+  // gender + age per named speaker
+  const lower=text.toLowerCase(), info={};
+  for(const n of named.keys()){
+    const nl=n.toLowerCase();let he=0,she=0,idx=-1;
+    while((idx=lower.indexOf(nl,idx+1))>-1){const w=lower.slice(idx,idx+120).replace(/[“"][^”"]*[”"]/g,'');he+=(w.match(/\b(he|his|him|himself)\b/g)||[]).length;she+=(w.match(/\b(she|hers|herself)\b/g)||[]).length+(w.match(/\bher\b/g)||[]).length*.5}
+    const age=new RegExp(`\\b(old|elderly|aged)\\s+${n}`,'i').test(text)?'elder':new RegExp(`\\b(little|young|small)\\s+${n}|\\b${n}\\b[^.]{0,40}\\b(girl|boy|child|kid)\\b`,'i').test(text)?'young':'adult';
+    const eerie=/spirit|ghost|voice|bell|wind|shadow|witch|demon|dragon|monster/i.test(n);
+    info[n]={gender:she>=he+1?'female':he>=she+1?'male':'unknown',age:eerie?'ageless':age,eerie};
+  }
+  // pass 2: resolve remaining quotes
+  let lastSpeakerInPara={},lastNamedBefore=(pi,pos)=>{
+    const ctx=(paras.slice(Math.max(0,pi-2),pi).join(' ')+' '+paras[pi].slice(0,pos)).replace(/“[^”]*”|"[^"]*"/g,' ');
+    let best=null,bi=-1;for(const n of named.keys()){const i=ctx.lastIndexOf(n.split(' ')[0]);if(i>bi){bi=i;best=n}}return best};
+  segs.forEach(s=>{
+    if(s.kind!=='q'){return}
+    if(!s.speaker){
+      if(s.pron){const g=s.pron==='she'?'female':s.pron==='he'?'male':null;
+        const ctx=(paras.slice(Math.max(0,s.pi-2),s.pi).join(' ')+' '+paras[s.pi].slice(0,s.pos)).replace(/“[^”]*”|"[^"]*"/g,' ');
+        let best=null,bi=-1;for(const n of named.keys()){if(g&&info[n].gender!==g&&info[n].gender!=='unknown')continue;const i=ctx.lastIndexOf(n.split(' ')[0]);if(i>bi){bi=i;best=n}}
+        s.speaker=best||lastSpeakerInPara[s.pi];}
+      else s.speaker=lastSpeakerInPara[s.pi]||lastNamedBefore(s.pi,s.pos);
+    }
+    if(!s.speaker){s.speaker='Stranger';if(!info.Stranger){info.Stranger={gender:'unknown',age:'adult',eerie:false};named.set('Stranger',0)}}
+    lastSpeakerInPara[s.pi]=s.speaker;
+  });
+  // lines (drop tiny attribution-only narration)
+  const tagRe=new RegExp(`^[,.\\s]*(?:[A-Za-z' ]{0,28})\\b${V}\\b[\\s,.!?]*(?:[a-z ]{0,20})?[.!?,]?\\s*$`,'i');
+  const lines=[];
+  segs.forEach(s=>{
+    let t=s.text.replace(/^[,.;:\s]+/,'').trim(); if(!/[A-Za-z]/.test(t))return;
+    if(s.kind==='n'){ if(words(t)<=5&&tagRe.test(t))return;
+      t=cap1(t); // split long narration into sentence groups ≤ 220 chars
+      const sents=t.match(/[^.!?]+[.!?]+["”’]?|[^.!?]+$/g)||[t];let buf='';
+      sents.forEach(x=>{if((buf+x).length>220&&buf){lines.push({pi:s.pi,speaker:'Narrator',text:buf.trim()});buf=''}buf+=x});
+      if(buf.trim())lines.push({pi:s.pi,speaker:'Narrator',text:buf.trim()});
+    } else lines.push({pi:s.pi,speaker:s.speaker,text:t.replace(/,\s*$/,'.')});
+  });
+  // scenes: balanced paragraph groups, nudged to time-word paragraph starts
+  const tw=words(text), nS=clamp(Math.round(tw/90),2,5), target=tw/nS;
+  const pw=paras.map(words),cum=[0];pw.forEach((w,i)=>cum.push(cum[i]+w));
+  const isTime=p=>/^(then|by |later|that night|at dawn|by morning|the next|suddenly|when |inside|far away|meanwhile|and from|the following)/i.test(p);
+  const cuts=[];let prev=0;
+  for(let k=1;k<nS;k++){const want=target*k;let best=-1,bs=1e9;
+    for(let i=prev+1;i<paras.length;i++){const d=Math.abs(cum[i]-want);if(d>target*.45)continue;const sc=d-(isTime(paras[i])?target*.3:0);if(sc<bs){bs=sc;best=i}}
+    if(best<0){for(let i=prev+1;i<paras.length;i++){const d=Math.abs(cum[i]-want);if(d<bs){bs=d;best=i}}}
+    if(best>prev&&best<paras.length){cuts.push(best);prev=best}}
+  const groups=[];let st0=0;[...cuts,paras.length].forEach(c=>{groups.push(paras.map((_,i)=>i).slice(st0,c));st0=c});
+  const allUsed=new Set(),usedTitles=new Set();
+  const scenes=groups.map((g,si)=>{
+    const st=g.map(i=>paras[i]).join(' ');const mood=guessMood(st);
+    // sfx: first line containing each keyword type, max 3 per scene
+    const sceneLines=lines.map((l,li)=>({l,li})).filter(o=>g.includes(o.l.pi));
+    const sfx=[];for(const type in SFX_WORDS){if(sfx.length>=3)break;
+      const hit=sceneLines.find(o=>new RegExp(`\\b(${SFX_WORDS[type].join('|')})\\b`,'i').test(o.l.text));
+      if(hit&&!(type==='steps'&&sfx.some(x=>x.type==='door'))&&!(type==='waves'&&allUsed.has('waves')&&si>0&&mood!=='tense'))sfx.push({type,line:hit.li,vol:1});}
+    sfx.forEach(x=>allUsed.add(x.type));
+    sceneLines.forEach(o=>o.l.scene=si);
+    // title: the most used noun that follows "the/a/an" in this scene (skipping adjectives), not used by an earlier scene
+    const ADJ=/^(last|great|dark|old|little|whole|single|very|long|same|first|next|small|tiny|bright|calm|angry|late|other|only|very|foot|colour|top|moment|way|morning|night|day|time)$/;
+    const nf={};(st.replace(/“[^”]*”|"[^"]*"/g,' ').toLowerCase().match(/\b(?:the|a|an)\s+([a-z']{3,})(?:\s+([a-z']{3,}))?/g)||[]).forEach(m=>{const w=m.split(/\s+/);let n=w[1];if(ADJ.test(n)&&w[2])n=w[2];if(ADJ.test(n)||/'s$/.test(n))return;nf[n]=(nf[n]||0)+1+(st.toLowerCase().split(n).length-2)*.5});
+    const top=Object.entries(nf).filter(([w])=>!usedTitles.has(w)).sort((a,b)=>b[1]-a[1]||b[0].length-a[0].length)[0];if(top)usedTitles.add(top[0]);
+    const first=(st.match(/[^.!?]+[.!?]/)||[st])[0].replace(/[“”"]/g,'').trim();
+    return {title:top?'The '+top[0]:'Scene '+(si+1),mood,summary:first.length>110?first.slice(0,107)+'…':first,sfx};
+  });
+  lines.forEach(l=>{if(l.scene==null)l.scene=0;delete l.pi});
+  const chars=[{name:'Narrator',role:'Tells the story',gender:'male',age:'adult',eerie:false}];
+  [...named.keys()].sort((a,b)=>lines.filter(l=>l.speaker===b).length-lines.filter(l=>l.speaker===a).length).forEach((n,i)=>{
+    const c=info[n];chars.push({name:n,role:(i===0?'Main':'Side')+(c.eerie?' · a voice from beyond':c.age==='elder'?' · older':c.age==='young'?' · young':''),...c})});
+  const arc=[];scenes.forEach(s=>{if(arc[arc.length-1]!==s.mood)arc.push(s.mood)});
+  const first=/(^|\s)I\s/.test(text.replace(/“[^”]*”|"[^"]*"/g,''))?'First person':'Third person';
+  return {title:title||guessTitle(text),genre:guessGenre(text),style:`${first}, ${arc.length>2?'slow build':'steady'}, ${scenes.some(s=>s.mood==='tense')?'dramatic':'warm'} narration`,arc,scenes,chars,lines,engine:'Built-in reader'};
+}
+function guessTitle(t){const m=t.match(/\b([A-Z][a-z]+)\b/g)||[];const f={};m.forEach(w=>{if(!STOP.has(w))f[w]=(f[w]||0)+1});const top=Object.entries(f).sort((a,b)=>b[1]-a[1])[0];return top?top[0]+"'s Story":'Untitled story'}
+
+/* =========================================================
+   GEMINI
+   ========================================================= */
+async function gemini(prompt,json=true){
+  const {gem,gemModel}=cfg();
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(gemModel)}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':gem},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:json?.3:.9,...(json?{responseMimeType:'application/json'}:{})}})});
+  if(!r.ok){let m='';try{m=(await r.json()).error?.message}catch(e){}throw new Error(`Gemini ${r.status}: ${m||r.statusText}`)}
+  const j=await r.json();const t=j.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'';
+  if(!t)throw new Error('Gemini returned nothing. Try again.');
+  return json?JSON.parse(t.replace(/^```json|```$/g,'')):t.trim();
+}
+async function geminiAnalyse(text,title){
+  const p=`You are the story analyst for an audio-drama studio. Read the story and return ONLY JSON with this shape:
+{"title":string,"genre":string,"narration_style":string (max 8 words),
+ "characters":[{"name":string,"role":"main"|"side","gender":"male"|"female"|"unknown","age":"child"|"young"|"adult"|"elder"|"ageless","description":string (max 8 words)}],
+ "scenes":[{"title":string (2-4 words),"mood":one of ${JSON.stringify(MOODS)},"summary":string (one sentence),
+   "lines":[{"speaker":"Narrator" or a character name,"text":string,"emotion":"calm"|"determined"|"afraid"|"joyful"|"whisper"|"sad"|"angry"}],
+   "sfx":[{"type":one of ${JSON.stringify(Object.keys(SFX_TYPES))},"line_index":index into this scene's lines where the sound should start}]}]}
+Rules: 2 to 5 scenes. The lines across all scenes must cover the WHOLE story in order, word for word, with dialogue split from narration and each dialogue line given to its speaker. Do not include dialogue tags like "she said" as separate lines. Narration lines at most 2 sentences. At most 3 sfx per scene, only sounds the text actually mentions or clearly implies. Do not list "Narrator" in characters.
+${title?`Title given by the writer: ${title}\n`:''}STORY:
+${text}`;
+  const j=await gemini(p,true);
+  const chars=[{name:'Narrator',role:'Tells the story',gender:'male',age:'adult',eerie:false}];
+  (j.characters||[]).forEach(c=>{if(!c?.name||/^narrator$/i.test(c.name))return;chars.push({name:c.name,role:cap1(c.role||'side')+(c.description?' · '+c.description:''),gender:c.gender||'unknown',age:c.age||'adult',eerie:c.age==='ageless'})});
+  const names=new Set(chars.map(c=>c.name));const lines=[],scenes=[];
+  (j.scenes||[]).forEach((s,si)=>{const base=lines.length;
+    (s.lines||[]).forEach(l=>{if(!l?.text)return;let sp=l.speaker||'Narrator';if(!names.has(sp)){const hit=[...names].find(n=>n.toLowerCase()===sp.toLowerCase());sp=hit||'Narrator'}lines.push({scene:si,speaker:sp,text:l.text.trim(),emotion:l.emotion})});
+    scenes.push({title:s.title||'Scene '+(si+1),mood:MOODS.includes(s.mood)?s.mood:'calm',summary:s.summary||'',sfx:(s.sfx||[]).filter(x=>SFX_TYPES[x.type]).slice(0,3).map(x=>({type:x.type,line:clamp(base+(+x.line_index||0),base,Math.max(base,lines.length-1)),vol:1}))});
+  });
+  if(!lines.length)throw new Error('Gemini could not split this story into lines.');
+  const arc=[];scenes.forEach(s=>{if(arc[arc.length-1]!==s.mood)arc.push(s.mood)});
+  return {title:j.title||title||'Untitled story',genre:j.genre||'Drama',style:j.narration_style||'Third person',arc,scenes,chars,lines,engine:'Gemini'};
+}
+
+/* =========================================================
+   VOICES
+   ========================================================= */
+const NOVELTY=/fred|junior|ralph|kathy|albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|pipe organ|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i;
+const FEMALE=/samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zoe|serena|kate|veena|nicky|female|zira|hazel|catherine|martha|sara|emma|olivia|amy|joanna|kimberly|salli|ivy|kendra|aria|jenny|libby|sonia|natasha|isla|mia/i;
+const MALE=/daniel|alex|tom|oliver|rishi|fred|aaron|arthur|gordon|lee|evan|nathan|male|david|mark|george|james|ryan|guy|brian|matthew|joey|justin|thomas|rocko|ralph|junior/i;
+let bVoices=[];
+function loadBrowserVoices(){if(!('speechSynthesis' in window))return[];const all=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)&&!NOVELTY.test(v.name));
+  const seen=new Set();bVoices=all.filter(v=>{const k=v.name;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(b.localService-a.localService)||a.name.localeCompare(b.name)).slice(0,24);return bVoices}
+if('speechSynthesis' in window){loadBrowserVoices();speechSynthesis.onvoiceschanged=()=>{loadBrowserVoices();if(S.view==='voices')render()}}
+const vGender=n=>FEMALE.test(n)?'female':MALE.test(n)?'male':'unknown';
+let elVoices=null;
+async function loadElevenVoices(){
+  if(elVoices)return elVoices;
+  const r=await fetch('https://api.elevenlabs.io/v1/voices',{headers:{'xi-api-key':cfg().el}});
+  if(!r.ok){let m='';try{const j=await r.json();m=j.detail?.message||j.detail?.status||JSON.stringify(j.detail||'')}catch(e){}throw new Error(`ElevenLabs ${r.status}: ${m||r.statusText}`)}
+  elVoices=((await r.json()).voices||[]).map(v=>({id:v.voice_id,name:v.name,gender:v.labels?.gender||'unknown',age:v.labels?.age||'',desc:[v.labels?.description,v.labels?.accent,v.labels?.age].filter(Boolean).join(' · '),use:v.labels?.use_case||v.labels?.['use case']||'',preview:v.preview_url}));
+  return elVoices;
+}
+function voiceList(){return useEleven()?(elVoices||[]):bVoices.map(v=>({id:v.name,name:v.name.replace(/\s*\(.*\)/,''),gender:vGender(v.name),desc:v.lang+(v.localService?' · on this laptop':' · online'),bv:v}))}
+const EMO={calm:{r:.95,p:1,stab:.75,style:.05},determined:{r:1.04,p:1,stab:.45,style:.35},afraid:{r:1.1,p:1.12,stab:.3,style:.55},joyful:{r:1.06,p:1.12,stab:.35,style:.5},whisper:{r:.86,p:.92,vol:.65,stab:.6,style:.2},sad:{r:.86,p:.9,stab:.5,style:.4},angry:{r:1.08,p:.92,stab:.3,style:.6}};
+function autoCast(an){
+  const list=voiceList();const used={};const cast={};
+  an.chars.forEach((c,i)=>{
+    const prev=S.cast[c.name];
+    let want=c.gender==='female'?'female':c.gender==='male'?'male':null;
+    let pool=list.filter(v=>!want||v.gender===want||v.gender==='unknown');if(!pool.length)pool=list;
+    if(useEleven()&&c.name==='Narrator'){const n=pool.find(v=>/narrat|audiobook/i.test(v.use+v.desc));if(n)pool=[n,...pool]}
+    if(useEleven()&&c.age==='elder'){const o=pool.filter(v=>/old|middle/i.test(v.age));if(o.length)pool=[...o,...pool]}
+    if(useEleven()&&(c.age==='young'||c.age==='child')){const o=pool.filter(v=>/young/i.test(v.age));if(o.length)pool=[...o,...pool]}
+    const pick=pool.find(v=>!used[v.id])||pool[i%Math.max(1,pool.length)];
+    if(pick)used[pick.id]=1;
+    const base={speed:c.age==='elder'?.9:c.eerie?.85:1,tone:c.age==='young'||c.age==='child'?72:c.age==='elder'?30:c.eerie?18:50,emotion:c.eerie?'whisper':c.name==='Narrator'?'calm':'determined'};
+    const valid=prev&&list.some(v=>v.id===prev.voice);
+    cast[c.name]=valid?prev:{voice:pick?.id||'',...base};
+  });
+  S.cast=cast;
+}
+function voiceParams(name,emotion){const c=S.cast[name]||{speed:1,tone:50,emotion:'calm'};const e=EMO[emotion||c.emotion]||EMO.calm;const ce=EMO[c.emotion]||EMO.calm;
+  return {rate:clamp(c.speed*e.r,.5,2),pitch:clamp(1+(c.tone-50)/100*.8+(e.p-1),.1,2),vol:e.vol||ce.vol||1,stab:e.stab,style:e.style,speed:clamp(c.speed,.7,1.2),c}}
+function estDur(line){const p=voiceParams(line.speaker,line.emotion);return words(line.text)/(2.65*p.rate)+.35}
+let speakingU=null;
+function speakBrowser(line,onend){
+  if(!('speechSynthesis' in window)||!bVoices.length){const ms=estDur(line)*1000;const t=setTimeout(onend,ms);return()=>clearTimeout(t)}
+  const p=voiceParams(line.speaker,line.emotion);const u=new SpeechSynthesisUtterance(line.text);
+  const v=bVoices.find(x=>x.name===p.c.voice)||bVoices[0];u.voice=v;u.lang=v.lang;u.rate=p.rate;u.pitch=p.pitch;u.volume=p.vol;
+  let done=false;const fin=()=>{if(done)return;done=true;onend()};u.onend=fin;u.onerror=fin;speakingU=u;
+  // safety: some browsers drop onend
+  const guard=setTimeout(fin,(estDur(line)*2.2+3)*1000);u.onend=()=>{clearTimeout(guard);fin()};
+  speechSynthesis.speak(u);return()=>{done=true;clearTimeout(guard);speechSynthesis.cancel()};
+}
+async function ttsEleven(line){
+  const p=voiceParams(line.speaker,line.emotion);const {el,elModel}=cfg();
+  const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(p.c.voice)}?output_format=mp3_44100_128`,{method:'POST',headers:{'xi-api-key':el,'Content-Type':'application/json',Accept:'audio/mpeg'},
+    body:JSON.stringify({text:line.text,model_id:elModel,voice_settings:{stability:p.stab,similarity_boost:.75,style:p.style,use_speaker_boost:true,speed:p.speed}})});
+  if(!r.ok){let m='';try{const j=await r.json();m=j.detail?.message||j.detail?.status||''}catch(e){}throw new Error(`ElevenLabs ${r.status}${r.status===401?' (check the key)':r.status===429?' (rate or credit limit reached)':''}${m?': '+m:''}`)}
+  return await r.arrayBuffer();
+}
+
+/* =========================================================
+   AUDIO: synth music + sound effects (Web Audio)
+   ========================================================= */
+let AC=null;function ac(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}
+const noiseCache=new WeakMap();
+function noiseBuf(ctx){if(noiseCache.has(ctx))return noiseCache.get(ctx);const b=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseCache.set(ctx,b);return b}
+function noise(ctx,t0,t1){const s=ctx.createBufferSource();s.buffer=noiseBuf(ctx);s.loop=true;s.start(t0,Math.random()*1.5);s.stop(t1);return s}
+function osc(ctx,type,f,t0,t1){const o=ctx.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t0);o.start(t0);o.stop(t1);return o}
+function filt(ctx,type,f,q=.7){const b=ctx.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;return b}
+function gain(ctx,v=0){const g=ctx.createGain();g.gain.value=v;return g}
+function env(g,t0,a,peak,hold,r){g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(peak,t0+a);g.gain.setValueAtTime(peak,t0+a+Math.max(0,hold));g.gain.linearRampToValueAtTime(0,t0+a+Math.max(0,hold)+r)}
+function hit(g,t,peak,dec){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+dec)}
+const mf=m=>440*Math.pow(2,(m-69)/12);
+const CH={maj:[0,4,7],min:[0,3,7],maj7:[0,4,7,11],m7:[0,3,7,10],add9:[0,4,7,14],sus2:[0,2,7],dim:[0,3,6],aug:[0,4,8]};
+const MUSIC={
+ calm:{prog:[[60,'maj7'],[57,'m7'],[65,'maj7'],[67,'add9']],len:4,wave:'triangle',cut:1300,lvl:.05,mel:2},
+ hopeful:{prog:[[62,'maj'],[69,'maj'],[71,'min'],[67,'maj']],len:3.2,wave:'triangle',cut:1800,lvl:.045,arp:.4},
+ happy:{prog:[[60,'maj'],[67,'maj'],[69,'min'],[65,'maj']],len:2.4,wave:'triangle',cut:2200,lvl:.04,arp:.2,pulse:.6},
+ sad:{prog:[[57,'min'],[53,'maj'],[60,'maj'],[52,'min']],len:5,wave:'triangle',cut:1000,lvl:.05,mel:2.5},
+ tense:{prog:[[45,'min'],[46,'maj'],[45,'min'],[44,'dim']],len:3,wave:'sawtooth',cut:520,lvl:.04,kick:.5,drone:33},
+ mysterious:{prog:[[50,'min'],[53,'aug'],[55,'sus2'],[49,'dim']],len:4,wave:'sine',cut:900,lvl:.06,plink:1.3,vib:1},
+ epic:{prog:[[50,'min'],[46,'maj'],[53,'maj'],[48,'maj']],len:2.4,wave:'sawtooth',cut:1500,lvl:.035,kick:.4,drone:38}};
+function scheduleMusic(ctx,out,mood,t0,t1,level=1){
+  const m=MUSIC[mood]||MUSIC.calm;const bed=gain(ctx,0);const lp=filt(ctx,'lowpass',m.cut);lp.connect(bed);bed.connect(out);
+  const fade=Math.min(2,(t1-t0)/4);bed.gain.setValueAtTime(0,t0);bed.gain.linearRampToValueAtTime(level,t0+fade);bed.gain.setValueAtTime(level,t1-fade);bed.gain.linearRampToValueAtTime(0,t1);
+  let k=0;for(let t=t0;t<t1;t+=m.len,k++){
+    const [root,q]=m.prog[k%m.prog.length];const end=Math.min(t1,t+m.len+.6);
+    CH[q].forEach((iv,j)=>{const f=mf(root+iv);[0,m.wave==='sawtooth'?7:0].forEach((det,d)=>{if(d&&!det)return;
+      const o=osc(ctx,m.wave,f,t,end);o.detune.value=det*(d?1:0);const g=gain(ctx);env(g,t,Math.min(.9,m.len*.3),m.lvl/(d?2:1),m.len-1.1,1);
+      if(m.vib){const l=osc(ctx,'sine',4.5,t,end),lg=gain(ctx,4);l.connect(lg);lg.connect(o.frequency)}
+      o.connect(g);g.connect(lp)})});
+    if(m.drone){const o=osc(ctx,'sawtooth',mf(m.drone),t,end),g=gain(ctx);env(g,t,.5,m.lvl*1.3,m.len-.9,.6);o.connect(g);g.connect(lp)}
+    if(m.arp){const notes=CH[q].map(iv=>mf(root+12+iv));for(let a=0,tt=t;tt<Math.min(t1,t+m.len)-.05;tt+=m.arp,a++){const o=osc(ctx,'triangle',notes[a%notes.length],tt,tt+.5),g=gain(ctx);hit(g,tt,m.lvl*2.2,.45);o.connect(g);g.connect(bed)}}
+    if(m.mel){for(let tt=t+.5;tt<Math.min(t1,t+m.len);tt+=m.mel){const iv=CH[q][Math.floor(Math.random()*CH[q].length)];const o=osc(ctx,'sine',mf(root+24+iv),tt,tt+1.6),g=gain(ctx);hit(g,tt,m.lvl*1.4,1.5);o.connect(g);g.connect(bed)}}
+    if(m.plink){for(let tt=t+.3;tt<Math.min(t1,t+m.len);tt+=m.plink*(.6+Math.random()*.8)){const f=[1046,1175,1397,1568,1760,2093][Math.floor(Math.random()*6)];const o=osc(ctx,'sine',f,tt,tt+1.3),g=gain(ctx);hit(g,tt,m.lvl*.9,1.2);o.connect(g);g.connect(bed)}}
+    if(m.kick){for(let tt=t;tt<Math.min(t1,t+m.len)-.02;tt+=m.kick){const o=osc(ctx,'sine',110,tt,tt+.35);o.frequency.exponentialRampToValueAtTime(42,tt+.25);const g=gain(ctx);hit(g,tt,m.lvl*7,.3);o.connect(g);g.connect(bed)}}
+    if(m.pulse){for(let tt=t;tt<Math.min(t1,t+m.len)-.02;tt+=m.pulse){const n=noise(ctx,tt,tt+.06),hp=filt(ctx,'highpass',7000),g=gain(ctx);hit(g,tt,m.lvl*1.6,.05);n.connect(hp);hp.connect(g);g.connect(bed)}}
+  }
+  return bed;
+}
+function scheduleSfx(ctx,out,type,t,vol=1,dur){
+  const d=dur||SFX_DUR[type]||3;const o=gain(ctx,vol);o.connect(out);const E=t+d;
+  const N=(f1,type1,q)=>{const n=noise(ctx,t,E+.1),fl=filt(ctx,type1,f1,q);n.connect(fl);return fl};
+  switch(type){
+  case 'rain':{const a=N(5000,'lowpass'),h=filt(ctx,'highpass',900),g=gain(ctx);a.connect(h);h.connect(g);env(g,t,1.2,.32,d-2.4,1.2);g.connect(o);break}
+  case 'wind':{const n=noise(ctx,t,E+.1),bp=filt(ctx,'bandpass',500,1.2),g=gain(ctx);const l=osc(ctx,'sine',.17,t,E),lg=gain(ctx,320);l.connect(lg);lg.connect(bp.frequency);n.connect(bp);bp.connect(g);env(g,t,1.6,.7,d-3.2,1.6);g.connect(o);break}
+  case 'thunder':{const a=N(380,'lowpass'),g=gain(ctx);a.connect(g);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1.2,t+.08);g.gain.exponentialRampToValueAtTime(.001,t+d);g.connect(o);
+    const b=N(1600,'lowpass'),g2=gain(ctx);b.connect(g2);hit(g2,t,.7,.5);g2.connect(o);const c=N(240,'lowpass'),g3=gain(ctx);c.connect(g3);g3.gain.setValueAtTime(0,t+1.1);g3.gain.linearRampToValueAtTime(.8,t+1.4);g3.gain.exponentialRampToValueAtTime(.001,t+d);g3.connect(o);break}
+  case 'door':{const s=osc(ctx,'sawtooth',190,t,t+.9);s.frequency.linearRampToValueAtTime(110,t+.8);const bp=filt(ctx,'bandpass',900,6),g=gain(ctx);env(g,t,.06,.35,.6,.15);s.connect(bp);bp.connect(g);g.connect(o);
+    const th=osc(ctx,'sine',95,t+.85,t+1.4);th.frequency.exponentialRampToValueAtTime(42,t+1.1);const g2=gain(ctx);hit(g2,t+.85,1,.4);th.connect(g2);g2.connect(o);break}
+  case 'knock':{[0,.22,.44].forEach(x=>{const s=osc(ctx,'sine',170,t+x,t+x+.2);s.frequency.exponentialRampToValueAtTime(80,t+x+.12);const g=gain(ctx);hit(g,t+x,.9,.15);s.connect(g);g.connect(o)});break}
+  case 'steps':{for(let x=0;x<d-.2;x+=.48){const n=noise(ctx,t+x,t+x+.12),bp=filt(ctx,'bandpass',700+Math.random()*300,1.4),g=gain(ctx);hit(g,t+x,.55,.1);n.connect(bp);bp.connect(g);g.connect(o)}break}
+  case 'waves':{const a=N(800,'lowpass'),g=gain(ctx,0),sw=gain(ctx,0);a.connect(sw);sw.connect(g);const l=osc(ctx,'sine',.16,t,E),lg=gain(ctx,.22);l.connect(lg);lg.connect(sw.gain);sw.gain.setValueAtTime(.25,t);env(g,t,1.5,1,d-3,1.5);g.connect(o);break}
+  case 'birds':{for(let k=0;k<d*1.6;k++){const tt=t+Math.random()*(d-.5);for(let c=0;c<2+Math.floor(Math.random()*3);c++){const s=osc(ctx,'sine',2600+Math.random()*900,tt+c*.11,tt+c*.11+.09);s.frequency.exponentialRampToValueAtTime(4200,tt+c*.11+.06);const g=gain(ctx);hit(g,tt+c*.11,.1,.08);s.connect(g);g.connect(o)}}break}
+  case 'magic':{const sc=[1046,1175,1397,1568,1760,2093,2349];for(let k=0;k<12;k++){const tt=t+k*.13;const s=osc(ctx,k%2?'triangle':'sine',sc[(k*3)%sc.length],tt,tt+1.1),g=gain(ctx);hit(g,tt,.16,1);s.connect(g);g.connect(o)}const a=N(7000,'highpass'),g=gain(ctx);a.connect(g);env(g,t,.8,.06,d-1.6,.8);g.connect(o);break}
+  case 'fire':{const a=N(900,'lowpass'),g=gain(ctx);a.connect(g);env(g,t,1,.22,d-2,1);g.connect(o);for(let k=0;k<d*9;k++){const tt=t+Math.random()*d,n=noise(ctx,tt,tt+.03),bp=filt(ctx,'bandpass',2500+Math.random()*2500,2),gg=gain(ctx);hit(gg,tt,.35*Math.random(),.025);n.connect(bp);bp.connect(gg);gg.connect(o)}break}
+  case 'bell':{[0,1.4].forEach(x=>[[1,.4],[2.76,.18],[5.4,.09],[8.93,.05]].forEach(([m,a])=>{const s=osc(ctx,'sine',520*m,t+x,t+x+2.6),g=gain(ctx);hit(g,t+x,a,2.4);s.connect(g);g.connect(o)}));break}
+  case 'sword':{[1830,2610,3720,5190].forEach(f=>{const s=osc(ctx,'sine',f,t,t+1),g=gain(ctx);hit(g,t,.12,.9);s.connect(g);g.connect(o)});const a=N(3000,'highpass'),g=gain(ctx);a.connect(g);hit(g,t,.5,.12);g.connect(o);break}
+  case 'crowd':{[600,1100,1700].forEach((f,i)=>{const n=noise(ctx,t,E+.1),bp=filt(ctx,'bandpass',f,.9),g=gain(ctx),l=osc(ctx,'sine',.3+i*.21,t,E),lg=gain(ctx,180);l.connect(lg);lg.connect(bp.frequency);n.connect(bp);bp.connect(g);env(g,t,1.4,.22,d-2.8,1.4);g.connect(o)});break}
+  case 'horse':{for(let x=0;x<d-.3;x+=.55)[0,.09,.2].forEach(y=>{const s=osc(ctx,'sine',130,t+x+y,t+x+y+.15);s.frequency.exponentialRampToValueAtTime(60,t+x+y+.1);const g=gain(ctx);hit(g,t+x+y,.6,.1);s.connect(g);g.connect(o)});break}
+  case 'heartbeat':{for(let x=0;x<d-.3;x+=.9)[0,.24].forEach((y,j)=>{const s=osc(ctx,'sine',62,t+x+y,t+x+y+.22);s.frequency.exponentialRampToValueAtTime(38,t+x+y+.15);const g=gain(ctx);hit(g,t+x+y,j?.6:.9,.18);s.connect(g);g.connect(o)});break}
+  case 'clock':{for(let x=0;x<d;x+=.5){const s=osc(ctx,'square',x%1?2400:2000,t+x,t+x+.03),hp=filt(ctx,'highpass',1500),g=gain(ctx);hit(g,t+x,.12,.025);s.connect(hp);hp.connect(g);g.connect(o)}break}
+  case 'horn':{[110,165,220].forEach(f=>{const s=osc(ctx,'sawtooth',f,t,E),lp=filt(ctx,'lowpass',700),g=gain(ctx);env(g,t,.4,.12,d-1.4,1);s.connect(lp);lp.connect(g);g.connect(o)});break}
+  }
+  return o;
+}
+
+/* ---------- timeline layout ---------- */
+const GAP=.38,SCENE_GAP=1.4;
+function layout(){
+  const an=S.an;if(!an)return;let t=.8;
+  an.scenes.forEach((sc,si)=>{sc.start=t;an.lines.forEach((l,li)=>{if(l.scene!==si)return;const b=bufs[li];l.start=t;l.dur=b?b.duration:estDur(l);t+=l.dur+GAP});sc.end=Math.max(t,sc.start+2);t=sc.end+SCENE_GAP});
+  an.total=t+.8;
+  an.scenes.forEach(sc=>{const per={};sc.sfx.forEach(x=>{const l=an.lines[x.line];const k=per[x.line]=(per[x.line]||0)+1;x.t=(l?l.start:sc.start)+.1+(k-1)*1.6;x.dur=SFX_DUR[x.type]||3})});
+}
+let bufs={}; // line index -> AudioBuffer (ElevenLabs)
+let mix=null, mixDirty=true;
+
+async function renderMix(withVoices=true){
+  const an=S.an;layout();const sr=44100;const len=Math.ceil((an.total+2)*sr);
+  const ctx=new OfflineAudioContext(2,len,sr);
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.connect(ctx.destination);
+  const mus=gain(ctx,.9),sfx=gain(ctx,.8),vox=gain(ctx,1);mus.connect(comp);sfx.connect(comp);vox.connect(comp);
+  an.scenes.forEach(sc=>scheduleMusic(ctx,mus,sc.mood,Math.max(0,sc.start-.6),sc.end+SCENE_GAP*.8,sc.musVol??1));
+  an.scenes.forEach(sc=>sc.sfx.forEach(x=>scheduleSfx(ctx,sfx,x.type,x.t,x.vol)));
+  if(withVoices){an.lines.forEach((l,i)=>{const b=bufs[i];if(!b)return;const s=ctx.createBufferSource();s.buffer=b;s.connect(vox);s.start(l.start);
+    mus.gain.setTargetAtTime(.45,l.start-.05,.08);mus.gain.setTargetAtTime(.9,l.start+l.dur,.25)})}
+  return await ctx.startRendering();
+}
+function peaks(buf,n){const d=buf.getChannelData(0),step=Math.floor(d.length/n),out=[];let mx=0;for(let i=0;i<n;i++){let m=0;for(let j=i*step;j<(i+1)*step;j+=16)m=Math.max(m,Math.abs(d[j]));out.push(m);mx=Math.max(mx,m)}return out.map(v=>clamp(v/(mx||1),.06,1))}
+function fakePeaks(n){const an=S.an;layout();const out=[];let seed=7;const r=()=>(seed=(seed*9301+49297)%233280)/233280;
+  for(let i=0;i<n;i++){const t=i/n*an.total;const inLine=an.lines.some(l=>t>=l.start&&t<=l.start+l.dur);out.push(inLine?.35+r()*.65:.08+r()*.14)}return out}
+
+/* =========================================================
+   PLAYBACK ENGINE (shared by player + timeline preview)
+   ========================================================= */
+const P={playing:false,t:0,idx:0,token:0,src:null,startedAt:0,offset:0,master:null,bed:null,bedScene:-1,cancel:null,lineAt:0,raf:0};
+function engineMode(){return useEleven()&&mix?'mix':'live'}
+function stopAll(){P.token++;if(P.cancel){P.cancel();P.cancel=null}if('speechSynthesis' in window)speechSynthesis.cancel();
+  if(P.src){try{P.src.onended=null;P.src.stop()}catch(e){}P.src=null}
+  if(P.master){const c=ac(),m=P.master;m.gain.setTargetAtTime(0,c.currentTime,.15);setTimeout(()=>m.disconnect(),900);P.master=null}P.bed=null;P.bedScene=-1}
+function lineAtTime(t){const L=S.an.lines;let i=0;for(let k=0;k<L.length;k++)if(L[k].start<=t+.01)i=k;return i}
+async function play(from){
+  const an=S.an;if(!an)return;layout();if(from!=null)P.t=from;if(P.t>=an.total-.5)P.t=0;
+  stopAll();P.playing=true;const ctx=ac();await ctx.resume();
+  if(engineMode()==='mix'){
+    if(mixDirty){toast('Updating the mix…');mix=await renderMix(true);mixDirty=false;}
+    const s=ctx.createBufferSource();s.buffer=mix;s.connect(ctx.destination);s.start(0,P.t);P.src=s;P.startedAt=ctx.currentTime;P.offset=P.t;
+    const tok=P.token;s.onended=()=>{if(tok===P.token){P.playing=false;P.t=0;refreshPlay()}};
+  } else {
+    P.master=gain(ctx,1);P.master.connect(ctx.destination);P.mus=gain(ctx,.9);P.mus.connect(P.master);P.sfxBus=gain(ctx,.8);P.sfxBus.connect(P.master);
+    const i=lineAtTime(P.t);startLine(i,P.token);
+  }
+  tick();refreshPlay();
+}
+function startLine(i,tok){
+  const an=S.an,ctx=ac();if(tok!==P.token)return;
+  if(i>=an.lines.length){P.playing=false;P.t=0;stopAll();refreshPlay();return}
+  const l=an.lines[i];P.idx=i;P.t=l.start;P.lineAt=ctx.currentTime;
+  const sc=an.scenes[l.scene];
+  if(P.bedScene!==l.scene){if(P.bed){const b=P.bed;b.gain.cancelScheduledValues(ctx.currentTime);b.gain.setTargetAtTime(0,ctx.currentTime,.5)}
+    P.bed=scheduleMusic(ctx,P.mus,sc.mood,ctx.currentTime,ctx.currentTime+(sc.end-l.start)*1.8+6,sc.musVol??1);P.bedScene=l.scene}
+  sc.sfx.forEach(x=>{if(x.line===i)scheduleSfx(ctx,P.sfxBus,x.type,ctx.currentTime+Math.max(.1,(x.t??l.start)-l.start),x.vol)});
+  P.mus.gain.setTargetAtTime(.5,ctx.currentTime,.1);
+  P.cancel=speakBrowser(l,()=>{if(tok!==P.token)return;P.mus.gain.setTargetAtTime(.9,ac().currentTime,.2);
+    const nx=an.lines[i+1];const gap=nx&&nx.scene!==l.scene?SCENE_GAP:GAP;setTimeout(()=>startLine(i+1,tok),gap*1000)});
+  refreshLine();
+}
+function pause(){if(!P.playing)return;P.t=curT();P.playing=false;stopAll();refreshPlay()}
+function curT(){const an=S.an;if(!P.playing||!an)return P.t;const ctx=ac();
+  if(engineMode()==='mix'&&P.src)return clamp(P.offset+ctx.currentTime-P.startedAt,0,an.total);
+  const l=an.lines[P.idx];return l?clamp(l.start+(ctx.currentTime-P.lineAt),l.start,l.start+l.dur+GAP):P.t}
+function seek(t){const was=P.playing;P.t=clamp(t,0,S.an.total-.1);if(was)play(P.t);else{stopAll();refreshPlay();refreshLine()}}
+function tick(){cancelAnimationFrame(P.raf);const f=()=>{if(!P.playing)return;const t=curT();updateClock(t);P.raf=requestAnimationFrame(f)};P.raf=requestAnimationFrame(f)}
+function updateClock(t){
+  const an=S.an;if(!an)return;const pr=t/an.total;
+  $$('.time b').forEach(b=>b.textContent=fmtT(t));
+  const bw=$('#bigwave');if(bw){const bars=bw.children,k=Math.floor(pr*bars.length);if(bw._k!==k){bw._k=k;for(let i=0;i<bars.length;i++)bars[i].classList.toggle('p',i<k)}}
+  const ph=$('#playhead');if(ph)ph.style.left=(pr*100)+'%';
+  const li=lineAtTime(t);if(li!==P.shownLine){P.shownLine=li;P.idx=li;refreshLine()}
+  $$('.ch').forEach((c,i)=>{const sc=an.scenes[i];const on=t>=sc.start-.2&&t<sc.end+SCENE_GAP;c.classList.toggle('on',on);const bar=c.querySelector('.bar i');if(bar)bar.style.width=on?clamp((t-sc.start)/(sc.end-sc.start)*100,0,100)+'%':'0'});
+}
+function refreshPlay(){$$('.pp i,.ppv i').forEach(i=>i.className='ph-fill '+(P.playing?'ph-pause':'ph-play'));$$('.pp,.ppv').forEach(b=>b.setAttribute('aria-label',P.playing?'Pause':'Play'));
+  const oa=$('#onair');if(oa){oa.classList.toggle('live',P.playing);oa.lastChild.textContent=P.playing?'NOW PLAYING':'PAUSED'}updateClock(P.playing?curT():P.t)}
+function refreshLine(){
+  const an=S.an;if(!an)return;const i=P.idx;const L=an.lines;
+  const ly=$('#lyric');if(ly){ly.innerHTML=[i-1,i,i+1].map(k=>L[k]?`<p class="${k===i?'cur':''}"><span class="spk">${esc(L[k].speaker)}</span>${esc(L[k].text)}</p>`:'<p></p>').join('')}
+  const sp=L[i]?.speaker;$$('.castmini .av').forEach(a=>a.classList.toggle('speaking',P.playing&&a.dataset.n===sp));
+  const ns=$('#nowScene');if(ns&&L[i]){const sc=an.scenes[L[i].scene];ns.textContent=`Scene ${L[i].scene+1} · ${sc.title}`}
+  $$('.b.cur').forEach(b=>b.classList.remove('cur'));const bl=$(`.b[data-k="line"][data-i="${i}"]`);if(bl&&P.playing)bl.classList.add('cur');
+}
+
+/* =========================================================
+   VIEWS
+   ========================================================= */
+const reach=()=>({story:1,analysis:!!S.an,voices:!!S.an,build:!!S.an,timeline:!!S.an&&S.built,player:!!S.an&&S.built,export:!!S.an&&S.built});
+function go(v){if(v!=='player'&&v!=='timeline')pause();if(v==='home'||reach()[v]){S.view=v;save();render();scrollTo(0,0)}}
+function renderTop(){
+  const idx=STEPS.findIndex(s=>s[0]===S.view),r=reach();
+  $('#steps').innerHTML=S.view==='home'?'':STEPS.map(([k,t],i)=>`<button data-step="${k}" class="${i<idx?'done':i===idx?'on':''}" ${r[k]?'':'disabled'} aria-current="${i===idx?'step':'false'}"><b>${i<idx?'<i class="ph ph-check"></i>':i+1}</b><span>${t}</span></button>`).join('');
+  const live=useGemini()||useEleven();$('#modeBtn').classList.toggle('live',live);
+  $('#modeTxt').textContent=live?[useGemini()&&'Gemini',useEleven()&&'ElevenLabs'].filter(Boolean).join(' + '):'Demo mode';
+}
+function render(){
+  renderTop();const m=$('#main');
+  const fn={home:vHome,story:vStory,analysis:vAnalysis,voices:vVoices,build:vBuild,timeline:vTimeline,player:vPlayer,export:vExport}[S.view]||vHome;
+  m.innerHTML='';const el=document.createElement('div');el.style.cssText='display:flex;flex-direction:column;flex:1';el.innerHTML=fn();m.appendChild(el);
+  (bind[S.view]||(()=>{}))();
+  document.title=(S.view==='home'?'VoiceVerse':`${STEPS.find(s=>s[0]===S.view)?.[1]||''} · VoiceVerse`);
+}
+const avatar=(n,i,cls='')=>`<span class="av ${cls}" data-n="${esc(n)}" style="background:${COLORS[i%COLORS.length]}">${esc(n.replace(/^the\s+/i,'')[0]||'?')}</span>`;
+const charIdx=n=>Math.max(0,S.an.chars.findIndex(c=>c.name===n));
+const moodChip=m=>`<span class="chip ${m==='tense'?'mood-tense':''}">${cap1(m)}</span>`;
+
+/* ---- home ---- */
+function mwave(n,seed,lo){let x=seed*9301+49297;const r=()=>{x=(x*9301+49297)%233280;return x/233280};let h='';
+  for(let i=0;i<n;i++){const e=Math.sin(Math.PI*(i+.5)/n)*.5+.5;const v=lo?.35+r()*.3:(.18+r()*.82)*(.55+e*.45);h+=`<i style="height:${Math.round(v*100)}%"></i>`}
+  return `<div class="mwave">${h}</div>`}
+function vHome(){return `
+<div class="hero">
+  <div>
+    <span class="onair"><span class="dot"></span>AI AUDIO-STORY STUDIO</span>
+    <h1 class="disp">Turn your story into a <em>cinematic</em> audio experience.</h1>
+    <p class="lede">Paste a story. VoiceVerse casts the voices, scores the scenes and adds the sound, ready to play.</p>
+    <div class="ctas">
+      <button class="btn btn-p btn-l" id="hCreate"><i class="ph ph-microphone-stage"></i>Create Audio Story</button>
+      <button class="btn btn-g" id="hSample"><i class="ph-fill ph-play-circle" style="font-size:28px;color:var(--tx)"></i>Try the sample story</button>
+    </div>
+    ${S.an?`<p class="hint" style="margin-top:20px">You have a story in progress: <button class="btn-g" id="hResume" style="text-decoration:underline;color:var(--tx)">${esc(S.an.title)}</button></p>`:''}
+  </div>
+  <div class="stage" aria-hidden="true">
+    <div class="page"><span class="cap">Your story · 360 words</span><h4>The Lantern Keeper</h4>
+      <p>The wind came off the sea long before the <mark style="border-color:#D29A12">thunder</mark> did. Mira climbed the last stair of the lighthouse.</p>
+      <p><mark style="border-color:var(--dia)">“Keep it lit, whatever comes,”</mark> old Tomas had told her.</p>
+      <p>Below, the waves turned black. Somewhere in the <mark style="border-color:#2F9A86">storm</mark>, a voice began to sing.</p></div>
+    <div class="mixer">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span class="cap">Scene 2 · The storm</span><span class="mono" style="font-size:13px;color:var(--mu)">00:48 / 03:42</span></div>
+      <div class="lane"><span class="ln"><span class="dot" style="background:var(--nar)"></span>Narrator</span><div class="tr"><div class="blk" style="left:0;width:58%;background:var(--nar)">${mwave(40,3)}</div></div></div>
+      <div class="lane"><span class="ln"><span class="dot" style="background:var(--dia)"></span>Tomas</span><div class="tr"><div class="blk" style="left:60%;width:30%;background:var(--dia)">${mwave(22,5)}</div></div></div>
+      <div class="lane"><span class="ln"><span class="dot" style="background:var(--mus)"></span>Music</span><div class="tr"><div class="blk" style="left:0;width:100%;background:var(--mus)">${mwave(70,9,1)}</div></div></div>
+      <div class="lane"><span class="ln"><span class="dot" style="background:var(--sfx)"></span>Effects</span><div class="tr"><div class="blk" style="left:22%;width:12%;background:var(--sfx)"></div><div class="blk" style="left:70%;width:16%;background:var(--sfx)"></div></div></div>
+    </div>
+  </div>
+</div>
+<div class="howrow">
+  <div><b>01</b><span>Write or paste<small>300–500 words, or generate one</small></span></div>
+  <div><b>02</b><span>AI reads it<small>Scenes, characters, mood</small></span></div>
+  <div><b>03</b><span>Voices + sound<small>Cast, music bed, effects</small></span></div>
+  <div><b>04</b><span>Play &amp; download<small>WAV or MP3</small></span></div>
+</div>`}
+const bind={};
+bind.home=()=>{$('#hCreate').onclick=()=>go('story');$('#hSample').onclick=()=>{S.title=SAMPLES[0].title;S.text=SAMPLES[0].text;S.tab='paste';go('story')};const r=$('#hResume');if(r)r.onclick=()=>go(S.built?'player':'analysis')};
+
+/* ---- story ---- */
+let busy=false,lastErr='';
+function vStory(){const w=words(S.text),pct=clamp(w/500*100,0,100);const cls=w>800?'bad':w>500?'warn':'';
+return `<div class="wrap"><div class="split">
+  <div class="editor" style="display:flex;flex-direction:column;gap:16px">
+    <div><h1 class="disp h1">Your story</h1><p class="hint" style="font-size:16px">Paste it, upload a .txt, or let VoiceVerse write one to start from.</p></div>
+    <div class="tabs" role="tablist">${[['paste','text-aa','Paste text'],['upload','upload-simple','Upload .txt'],['gen','sparkle','Generate a story']].map(([k,ic,t])=>`<button role="tab" aria-selected="${S.tab===k}" class="${S.tab===k?'on':''}" data-tab="${k}"><i class="ph ph-${ic}"></i>${t}</button>`).join('')}</div>
+    <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:440px">
+      ${S.tab==='upload'?`<label class="drop" id="drop"><i class="ph ph-file-text"></i><b style="color:var(--tx)">Drop a .txt file here</b><span>or click to choose one. PDF comes after the MVP.</span><input type="file" id="file" accept=".txt,text/plain" class="hidden"></label>`:
+       S.tab==='gen'?`<div class="drop" style="border-style:solid"><i class="ph ph-sparkle" style="color:var(--sfx)"></i><b style="color:var(--tx)">Generate a fantasy story</b><span>${useGemini()?'Gemini writes a fresh 300–400 word story you can edit.':'Without a Gemini key this loads one of the built-in sample stories.'}</span>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px"><input class="inp" id="genIdea" placeholder="Optional idea, e.g. a dragon who is afraid of the dark" style="width:min(420px,80vw)"><button class="btn btn-p" id="genBtn">${busy?'<i class="ph ph-circle-notch spin"></i>Writing…':'<i class="ph ph-sparkle"></i>Generate'}</button></div></div>`:
+       `<textarea id="ta" aria-label="Story text" placeholder="Once upon a time…  (Put dialogue in quote marks so each character gets a voice.)">${esc(S.text)}</textarea>`}
+      <div class="ft">
+        <span class="mono" style="font-size:14px"><b id="wc">${w}</b> <span class="hint">/ 500 words</span></span>
+        <span class="meter ${cls}" id="meter"><i style="width:${pct}%"></i></span>
+        <span class="hint" id="wmsg">${wordMsg(w)}</span>
+        ${S.text?'<button class="btn btn-g btn-sm" id="clear" style="margin-left:auto"><i class="ph ph-eraser"></i>Clear</button>':''}
+      </div>
+    </div>
+  </div>
+  <aside class="side">
+    <div class="panel">
+      <div class="field"><label for="lang">Language</label><select class="inp" id="lang"><option value="en">English</option><option disabled>Bengali (after the MVP)</option></select></div>
+      <div class="field"><label for="genre">Genre</label><select class="inp" id="genre">${['auto','Fantasy','Adventure','Mystery','Sci-fi','Horror','Fairy tale','Drama'].map(g=>`<option value="${g}" ${S.genreHint===g?'selected':''}>${g==='auto'?'Let the AI decide':g}</option>`).join('')}</select></div>
+      <div class="field"><label for="title">Story title</label><input class="inp" id="title" value="${esc(S.title)}" placeholder="Optional"></div>
+    </div>
+    <div class="panel" style="padding:20px 24px"><span class="cap">Works best with</span><div style="margin-top:12px">
+      <div class="check"><i class="ph-fill ph-check-circle"></i>2–4 named characters</div>
+      <div class="check"><i class="ph-fill ph-check-circle"></i>Dialogue in quote marks</div>
+      <div class="check"><i class="ph-fill ph-check-circle"></i>Sounds you can hear: rain, doors, steps</div></div></div>
+    ${useGemini()?'':`<div class="note"><i class="ph ph-info"></i><span>Demo mode uses the built-in story reader. <button id="openSet" style="text-decoration:underline">Add a Gemini key</button> for full AI analysis.</span></div>`}
+    ${lastErr?`<div class="err"><i class="ph ph-warning-circle"></i><span>${esc(lastErr)}</span></div>`:''}
+    <button class="btn btn-p btn-l" id="analyse" style="margin-top:auto" ${w<40||w>1000||busy?'disabled':''}>${busy?'<i class="ph ph-circle-notch spin"></i>Reading your story…':'Analyse story<i class="ph ph-arrow-right"></i>'}</button>
+  </aside>
+</div></div>`}
+function wordMsg(w){return w===0?'Start with 300–500 words':w<40?'A little more, please (40 words minimum)':w<300?'Short and sweet, about '+Math.max(1,Math.round(w/150))+' min':w<=500?'Good length for a '+Math.round(w/150)+'–'+Math.round(w/120)+' minute story':w<=800?'Longer than the demo limit; it will take longer':'Too long for now: keep it under 800 words'}
+bind.story=()=>{
+  $$('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;render()});
+  const ta=$('#ta');if(ta)ta.oninput=()=>{S.text=ta.value;const w=words(S.text);$('#wc').textContent=w;$('#meter').className='meter '+(w>800?'bad':w>500?'warn':'');$('#meter i').style.width=clamp(w/500*100,0,100)+'%';$('#wmsg').textContent=wordMsg(w);$('#analyse').disabled=w<40||w>1000;save()};
+  $('#title').oninput=e=>{S.title=e.target.value;save()};$('#genre').onchange=e=>{S.genreHint=e.target.value;save()};
+  const c=$('#clear');if(c)c.onclick=()=>{S.text='';S.title='';S.tab='paste';save();render()};
+  const os=$('#openSet');if(os)os.onclick=openSettings;
+  const f=$('#file'),d=$('#drop');
+  if(f){const readF=file=>{if(!file)return;if(!/\.txt$/i.test(file.name)&&file.type!=='text/plain'){toast('Please choose a .txt file');return}if(file.size>200000){toast('That file is too big');return}
+      const r=new FileReader();r.onload=()=>{S.text=String(r.result);if(!S.title)S.title=file.name.replace(/\.txt$/i,'').replace(/[-_]+/g,' ');S.tab='paste';save();render();toast('Story loaded')};r.readAsText(file)};
+    f.onchange=()=>readF(f.files[0]);d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');d.ondrop=e=>{e.preventDefault();d.classList.remove('over');readF(e.dataTransfer.files[0])}}
+  const g=$('#genBtn');if(g)g.onclick=async()=>{
+    if(!useGemini()){const s=SAMPLES[(SAMPLES.findIndex(x=>x.title===S.title)+1)%SAMPLES.length];S.title=s.title;S.text=s.text;S.tab='paste';save();render();toast('Loaded a sample story');return}
+    busy=true;lastErr='';render();
+    try{const idea=$('#genIdea')?.value||'';const t=await gemini(`Write an original ${S.genreHint==='auto'?'fantasy':S.genreHint} story for an audio drama, 300 to 380 words. ${idea?'Idea: '+idea+'.':''} Use 2 or 3 named characters, put all dialogue in straight double quotes with clear tags like "said Mira", include sounds a listener can hear (rain, doors, footsteps, wind, birds, fire, bells, magic), and end warmly. Return the title on the first line, then a blank line, then the story. No markdown.`,false);
+      const parts=t.replace(/\*\*/g,'').split(/\n\s*\n/);S.title=parts[0].replace(/^title:\s*/i,'').replace(/^#+\s*/,'').trim();S.text=parts.slice(1).join('\n\n').trim();S.tab='paste'}
+    catch(e){lastErr=e.message}busy=false;save();render()};
+  $('#analyse').onclick=analyse;
+};
+async function analyse(){
+  if(busy)return;busy=true;lastErr='';render();
+  try{let an;
+    if(useGemini()){try{an=await geminiAnalyse(S.text,S.title)}catch(e){lastErr='Gemini failed, so the built-in reader was used instead. ('+e.message+')';an=localAnalyse(S.text,S.title)}}
+    else{await sleep(700);an=localAnalyse(S.text,S.title)}
+    if(S.genreHint!=='auto')an.genre=S.genreHint;
+    S.an=an;S.built=false;bufs={};mix=null;mixDirty=true;P.t=0;
+    if(useEleven()){try{await loadElevenVoices()}catch(e){lastErr=e.message}}
+    autoCast(an);S.sel=an.chars[1]?.name||'Narrator';busy=false;save();go('analysis');if(lastErr)toast(lastErr.slice(0,120));
+  }catch(e){busy=false;lastErr=e.message;render()}
+}
+
+/* ---- analysis ---- */
+function vAnalysis(){const an=S.an;const nLines=n=>an.lines.filter(l=>l.speaker===n).length;
+return `<div class="wrap">
+  <div class="head"><div><span class="cap">What the AI found · ${esc(an.engine)}</span><h1 class="disp h1" style="margin-top:12px">${esc(an.title)}</h1></div>
+    <div class="acts"><button class="btn btn-s" id="reAn"><i class="ph ph-arrow-counter-clockwise"></i>Re-analyse</button><button class="btn btn-p" id="toVoices">Cast the voices<i class="ph ph-arrow-right"></i></button></div></div>
+  <div class="facts">
+    <div class="panel fact"><span class="cap">Genre</span><div class="v">${esc(an.genre)}</div></div>
+    <div class="panel fact"><span class="cap">Scenes</span><div class="v">${an.scenes.length}</div></div>
+    <div class="panel fact"><span class="cap">Mood across the story</span><div class="arc">${an.arc.map(moodChip).join('<i class="ph ph-arrow-right"></i>')}</div></div>
+    <div class="panel fact"><span class="cap">Narration style</span><div style="font-size:var(--t3);font-weight:600;margin-top:12px;line-height:1.3">${esc(an.style)}</div></div>
+  </div>
+  <div class="ancols">
+    <div class="scenes">${an.scenes.map((s,i)=>`<div class="panel scene" style="${s.mood==='tense'?'border-color:rgba(255,90,54,.45)':''}">
+      <div class="sr"><span class="cap">Scene ${String(i+1).padStart(2,'0')}</span><select class="chip" data-mood="${i}" aria-label="Scene ${i+1} mood" style="appearance:none;cursor:pointer">${MOODS.map(m=>`<option value="${m}" ${m===s.mood?'selected':''}>${cap1(m)}</option>`).join('')}</select></div>
+      <h4>${esc(s.title)}</h4><p>${esc(s.summary)}</p>
+      <div class="cues"><span class="chip"><span class="dot" style="background:var(--mus)"></span>${cap1(s.mood)} music</span>${s.sfx.map(x=>`<span class="chip"><span class="dot" style="background:var(--sfx)"></span>${SFX_TYPES[x.type]}</span>`).join('')}</div>
+      <span class="hint">${an.lines.filter(l=>l.scene===i).length} lines</span></div>`).join('')}</div>
+    <div class="panel cast"><span class="cap">Characters · ${an.chars.length}</span><div style="margin-top:8px">
+      ${an.chars.map((c,i)=>`<div class="person">${avatar(c.name,i)}<div>${i===0?`<b style="font-size:16px">Narrator</b>`:`<input value="${esc(c.name)}" data-rename="${i}" aria-label="Character name">`}<small>${esc(c.role)}${c.gender!=='unknown'&&i?' · '+c.gender:''}</small></div><span class="n">${nLines(c.name)} lines</span></div>`).join('')}
+    </div><p class="hint" style="margin-top:12px;padding-top:16px;border-top:1px solid var(--line)"><i class="ph ph-pencil-simple"></i> Wrong name? Click it to fix it before casting.</p></div>
+  </div></div>`}
+bind.analysis=()=>{
+  $('#reAn').onclick=()=>{go('story');setTimeout(analyse,50)};$('#toVoices').onclick=()=>go('voices');
+  $$('[data-mood]').forEach(s=>s.onchange=()=>{S.an.scenes[+s.dataset.mood].mood=s.value;S.an.arc=[];S.an.scenes.forEach(x=>{if(S.an.arc[S.an.arc.length-1]!==x.mood)S.an.arc.push(x.mood)});mixDirty=true;save();render()});
+  $$('[data-rename]').forEach(inp=>inp.onchange=()=>{const c=S.an.chars[+inp.dataset.rename],old=c.name,nw=inp.value.trim()||old;if(nw===old)return;
+    S.an.lines.forEach(l=>{if(l.speaker===old)l.speaker=nw});S.cast[nw]=S.cast[old];delete S.cast[old];if(S.sel===old)S.sel=nw;c.name=nw;save();render();toast('Renamed to '+nw)});
+};
+
+/* ---- voices ---- */
+function vVoices(){
+  const an=S.an;if(!S.cast[S.sel])S.sel=an.chars[0].name;const c=an.chars.find(x=>x.name===S.sel),ci=charIdx(S.sel),cc=S.cast[S.sel];
+  const list=voiceList();const first=an.lines.find(l=>l.speaker===S.sel);
+  const noV=!list.length;
+  return `<div class="vs">
+  <div class="castlist"><span class="cap" style="margin:0 8px 8px">Cast · ${an.chars.length} voices</span>
+    ${an.chars.map((x,i)=>{const v=list.find(v=>v.id===S.cast[x.name]?.voice);return `<button class="ci ${x.name===S.sel?'on':''}" data-sel="${esc(x.name)}">${avatar(x.name,i)}<div><b>${esc(x.name)}</b><small>${v?esc(v.name):'Default voice'}</small></div><i class="ph-fill ph-check-circle" style="color:var(--mus)"></i></button>`}).join('')}
+    <div class="castfoot" style="margin-top:auto;padding:16px 8px 0;border-top:1px solid var(--line)"><p class="hint" style="margin-bottom:12px">VoiceVerse picked a voice for everyone. Change any you don't like.</p>
+      <button class="btn btn-p" id="toBuild" style="width:100%">Build the audio<i class="ph ph-arrow-right"></i></button></div>
+  </div>
+  <div class="vmain">
+    <div class="head"><div class="who">${avatar(c.name,ci)}<div><span class="cap">${esc(c.role)}</span><h2 class="disp h1" style="margin-top:8px">${esc(c.name)}</h2></div></div>
+      <span class="chip"><i class="ph ph-${useEleven()?'waveform':'desktop'}" style="color:var(--sfx)"></i>${useEleven()?'ElevenLabs voices':'Voices from this browser'}</span></div>
+    ${noV?`<div class="note"><i class="ph ph-info"></i><span>${useEleven()?'No ElevenLabs voices loaded yet. Check your key in settings.':'This browser has no built-in English voices, so playback will run silently with music and effects. Try Chrome or Safari on a laptop, or add an ElevenLabs key.'}</span></div>`:''}
+    <div class="voices" id="voices">${list.map(v=>`<button class="voice ${v.id===cc.voice?'on':''}" data-voice="${esc(v.id)}"><span class="play" data-prev="${esc(v.id)}" role="button" aria-label="Preview ${esc(v.name)}"><i class="ph-fill ph-play"></i></span><div style="min-width:0"><b>${esc(v.name)}</b><small>${esc([v.gender!=='unknown'?cap1(v.gender):'',v.desc].filter(Boolean).join(' · '))}</small></div></button>`).join('')}</div>
+    <div class="ctrls">
+      <div class="panel ctrl"><div class="row"><b>Speed</b><span class="mono" id="spv">${cc.speed.toFixed(2)}×</span></div><input type="range" min="0.7" max="1.3" step="0.05" value="${cc.speed}" id="speed" aria-label="Speed"><div class="ends"><span>Slower</span><span>Faster</span></div></div>
+      <div class="panel ctrl"><div class="row"><b>Tone</b><span class="mono" id="tnv">${cc.tone<35?'Deep':cc.tone>65?'Bright':'Natural'}</span></div><input type="range" min="0" max="100" step="1" value="${cc.tone}" id="tone" aria-label="Tone"><div class="ends"><span>Deep</span><span>Bright</span></div></div>
+      <div class="panel ctrl"><div class="row"><b>Emotion</b><span class="hint">default for this voice</span></div><div class="emo">${Object.keys(EMO).map(e=>`<button class="chip ${cc.emotion===e?'on':''}" data-emo="${e}">${cap1(e)}</button>`).join('')}</div></div>
+    </div>
+    <div class="panel preview"><button class="play" id="prevLine" aria-label="Hear this line"><i class="ph-fill ph-play"></i></button>
+      <div style="flex:1;min-width:0"><span class="cap">Hear it in the story${first?' · scene '+(first.scene+1):''}</span><q>${esc((first?.text||'This is how I will sound in your story.').slice(0,160))}</q></div></div>
+  </div></div>`}
+let prevAudio=null;
+function stopPreview(){if(prevAudio){prevAudio.pause();prevAudio=null}if('speechSynthesis' in window)speechSynthesis.cancel()}
+async function previewLine(name,text,btn){
+  pause();stopPreview();const ic=btn?.querySelector('i');if(ic)ic.className='ph ph-circle-notch spin';
+  const line={speaker:name,text};
+  try{
+    if(useEleven()){const ab=await ttsEleven(line);const url=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));prevAudio=new Audio(url);prevAudio.onended=()=>{if(ic)ic.className='ph-fill ph-play'};await prevAudio.play();if(ic)ic.className='ph-fill ph-pause'}
+    else{if(ic)ic.className='ph-fill ph-pause';speakBrowser(line,()=>{if(ic)ic.className='ph-fill ph-play'})}
+  }catch(e){toast(e.message);if(ic)ic.className='ph-fill ph-play'}
+}
+const setP=r=>r.style.setProperty('--p',((r.value-r.min)/(r.max-r.min)*100)+'%');
+bind.voices=()=>{
+  const cc=S.cast[S.sel];const changed=()=>{bufs={};mix=null;mixDirty=true;S.built=false;save()};
+  $$('[data-sel]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.sel;stopPreview();render()});
+  $('#toBuild').onclick=()=>{stopPreview();go('build')};
+  $$('[data-voice]').forEach(b=>b.onclick=e=>{const id=b.dataset.voice;const isPrev=e.target.closest('[data-prev]');cc.voice=id;changed();
+    $$('.voice').forEach(x=>x.classList.toggle('on',x===b));$$('.ci.on small')[0].textContent=b.querySelector('b').textContent;
+    if(isPrev){const v=voiceList().find(v=>v.id===id);if(useEleven()&&v?.preview){stopPreview();prevAudio=new Audio(v.preview);prevAudio.play().catch(()=>{})}else previewLine(S.sel,`Hello. I'm ${S.sel==='Narrator'?'your narrator':S.sel}, and this is how I sound.`,b.querySelector('.play'))}});
+  const sp=$('#speed'),tn=$('#tone');[sp,tn].forEach(setP);
+  sp.oninput=()=>{cc.speed=+sp.value;$('#spv').textContent=cc.speed.toFixed(2)+'×';setP(sp)};sp.onchange=changed;
+  tn.oninput=()=>{cc.tone=+tn.value;$('#tnv').textContent=cc.tone<35?'Deep':cc.tone>65?'Bright':'Natural';setP(tn)};tn.onchange=changed;
+  $$('[data-emo]').forEach(b=>b.onclick=()=>{cc.emotion=b.dataset.emo;$$('[data-emo]').forEach(x=>x.classList.toggle('on',x===b));changed()});
+  $('#prevLine').onclick=e=>{const f=S.an.lines.find(l=>l.speaker===S.sel);previewLine(S.sel,(f?.text||'This is how I will sound in your story.').slice(0,240),e.currentTarget)};
+};
+
+/* ---- build ---- */
+const BSTEPS=[['script','scroll','Writing the script'],['voices','microphone','Recording voices'],['music','music-notes','Scoring the music'],['sfx','waveform','Placing sound effects'],['mix','sliders-horizontal','Mixing it together']];
+let B={running:false,step:0,prog:0,detail:{},fail:null};
+function vBuild(){const pct=Math.round(B.prog*100);const C=2*Math.PI*200;
+return `<div class="gen-wrap">
+  <div class="ring"><svg viewBox="0 0 440 440" aria-hidden="true"><circle cx="220" cy="220" r="200" fill="none" stroke="#262B37" stroke-width="12"/><circle id="ringc" cx="220" cy="220" r="200" fill="none" stroke="${B.fail?'#FF7A7A':'#FF5A36'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-B.prog)}" transform="rotate(-90 220 220)"/></svg>
+    <div class="c"><span class="disp" id="pct">${pct}%</span><span class="cap" id="eta" style="margin-top:12px">${B.fail?'Stopped':pct>=100?'Done':'Working…'}</span></div></div>
+  <div><span class="cap">Building your audio story</span><h1 class="disp h1" id="bTitle" style="margin:12px 0 32px">${B.fail?'Something went wrong':pct>=100?'Ready to listen':BSTEPS[B.step][2]}</h1>
+    <div id="plist">${BSTEPS.map(([k,ic,t],i)=>{const st=B.fail&&i===B.step?'fail':i<B.step||B.prog>=1?'done':i===B.step?'now':'wait';
+      return `<div class="pstep ${st}"><span class="ic"><i class="ph ph-${st==='done'?'check':st==='fail'?'x':ic}"></i></span><div><b>${t}</b><small>${esc(B.detail[k]||'')}</small></div><span class="st">${st==='done'?'Done':st==='fail'?'Failed':st==='now'?'Working':'—'}</span></div>`}).join('')}</div>
+    ${B.fail?`<div class="err" style="margin-top:20px"><i class="ph ph-warning-circle"></i><span>${esc(B.fail)}</span></div><div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap"><button class="btn btn-p" id="retry"><i class="ph ph-arrow-clockwise"></i>Retry this step</button>${useEleven()?'<button class="btn btn-s" id="useBrowser">Use browser voices instead</button>':''}<button class="btn btn-g" id="backV">Back to voices</button></div>`:
+     `<p class="hint" style="margin-top:24px"><i class="ph ph-info"></i> Keep this tab open. ${useEleven()?'Each line is recorded by ElevenLabs.':'Demo mode uses this browser\'s voices; they play live instead of being recorded.'}</p>`}
+  </div></div>`}
+bind.build=()=>{if(!B.running&&!B.fail&&B.prog<1)runBuild();if(!B.running&&B.prog>=1&&!B.fail)runBuild();
+  const r=$('#retry');if(r)r.onclick=()=>{B.fail=null;runBuild(B.step)};const ub=$('#useBrowser');if(ub)ub.onclick=()=>{KEYS.set('vv-el','',false);elVoices=null;autoCast(S.an);B.fail=null;render();runBuild(0)};
+  const bv=$('#backV');if(bv)bv.onclick=()=>{B.fail=null;go('voices')}};
+function upd(){if(S.view!=='build')return;const C=2*Math.PI*200;const c=$('#ringc');if(c)c.setAttribute('stroke-dashoffset',C*(1-B.prog));const p=$('#pct');if(p)p.textContent=Math.round(B.prog*100)+'%';
+  $$('#plist .pstep').forEach((el,i)=>{const st=i<B.step?'done':i===B.step?'now':'wait';el.className='pstep '+st;el.querySelector('.ic i').className='ph ph-'+(st==='done'?'check':BSTEPS[i][1]);el.querySelector('small').textContent=B.detail[BSTEPS[i][0]]||'';el.querySelector('.st').textContent=st==='done'?'Done':st==='now'?'Working':'—'});
+  const t=$('#bTitle');if(t)t.textContent=BSTEPS[B.step][2]}
+async function runBuild(from=0){
+  if(B.running)return;B.running=true;B.fail=null;const an=S.an;const W=[.08,.62,.1,.08,.12];const base=i=>W.slice(0,i).reduce((a,b)=>a+b,0);
+  B.step=from;B.prog=base(from);if(S.view==='build')render();
+  try{
+    for(let i=from;i<5;i++){B.step=i;const k=BSTEPS[i][0];B.prog=base(i);upd();
+      if(k==='script'){B.detail.script=`${an.lines.length} lines, each tagged to a speaker`;await sleep(500)}
+      if(k==='voices'){
+        if(useEleven()){const todo=an.lines.map((l,j)=>j).filter(j=>!bufs[j]);let done=an.lines.length-todo.length;const ctx=ac();
+          const worker=async()=>{while(todo.length){const j=todo.shift();const l=an.lines[j];B.detail.voices=`${l.speaker} · line ${done+1} of ${an.lines.length}`;upd();
+            const ab=await ttsEleven(l);bufs[j]=await ctx.decodeAudioData(ab);done++;B.prog=base(i)+W[i]*done/an.lines.length;upd()}};
+          await Promise.all([worker(),worker(),worker()]);B.detail.voices=`${an.lines.length} lines recorded`;}
+        else{for(let j=0;j<an.lines.length;j++){B.detail.voices=`${an.lines[j].speaker} · line ${j+1} of ${an.lines.length}`;B.prog=base(i)+W[i]*(j+1)/an.lines.length;upd();await sleep(Math.min(60,1800/an.lines.length))}
+          B.detail.voices=`${an.chars.length} voices ready (they play live)`}
+      }
+      if(k==='music'){layout();B.detail.music=an.scenes.map(s=>cap1(s.mood)).join(' → ');await sleep(450)}
+      if(k==='sfx'){const n=an.scenes.reduce((a,s)=>a+s.sfx.length,0);B.detail.sfx=`${n} cue${n===1?'':'s'} across ${an.scenes.length} scenes`;await sleep(450)}
+      if(k==='mix'){layout();if(useEleven()){B.detail.mix='Voices on top, music underneath';upd();mix=await renderMix(true);mixDirty=false}else{B.detail.mix=`${fmtT(an.total)} long`;await sleep(400)}}
+    }
+    B.prog=1;B.step=4;S.built=true;B.running=false;save();if(S.view==='build'){render();await sleep(900);if(S.view==='build')go('timeline')}
+  }catch(e){B.running=false;B.fail=e.message||String(e);if(S.view==='build')render()}
+}
+
+/* ---- timeline ---- */
+function vTimeline(){
+  const an=S.an;layout();const T=an.total;const minW=Math.max(100,T*18);const pc=x=>x/T*100;
+  const blk=(cls,k,i,a,d,label,extra='')=>`<button class="b ${cls} ${S.selBlock&&S.selBlock.k===k&&S.selBlock.i==i?'sel':''}" data-k="${k}" data-i="${i}" style="left:${pc(a)}%;width:calc(${pc(d)}% - 3px)" title="${esc(label)}"><span>${esc(label)}</span>${extra}</button>`;
+  const wv=(n,s)=>{let h='',x=s*7+3;for(let i=0;i<n;i++){x=(x*9301+49297)%233280;h+=`<i style="height:${Math.round((.25+x/233280*.75)*100)}%"></i>`}return `<span class="wv">${h}</span>`};
+  return `<div class="wrap" style="gap:16px">
+  <div class="head"><div><span class="cap">Scene by scene · ${fmtT(T)}</span><h2 class="disp h1" style="margin-top:8px">${esc(an.title)}</h2></div>
+    <div class="legend"><span><span class="dot" style="background:var(--nar)"></span>Narration</span><span><span class="dot" style="background:var(--dia)"></span>Dialogue</span><span><span class="dot" style="background:var(--mus)"></span>Music</span><span><span class="dot" style="background:var(--sfx)"></span>Sound effects</span></div>
+    <div class="acts"><button class="btn btn-s ppv" id="tPlay" aria-label="Play"><i class="ph-fill ph-play"></i></button><span class="time mono" style="align-self:center"><b>${fmtT(P.t)}</b> / ${fmtT(T)}</span><button class="btn btn-p" id="toPlayer">Listen to the story<i class="ph ph-arrow-right"></i></button></div></div>
+  <div class="board">
+    <div class="lanes-l"><div></div><div><i class="ph ph-book-open-text"></i>Narration</div><div><i class="ph ph-chats-circle"></i>Dialogue</div><div><i class="ph ph-music-notes"></i>Music</div><div><i class="ph ph-waveform"></i>Effects</div></div>
+    <div class="scroller"><div class="grid" id="tgrid" style="width:max(100%,${minW}px)">
+      <div class="ruler">${an.scenes.map((s,i)=>`<div data-seek="${s.start}" style="left:${pc(s.start-(i?SCENE_GAP/2:.8))}%;width:${pc(s.end-s.start+SCENE_GAP)}%"><b>${String(i+1).padStart(2,'0')} · ${esc(s.title)}</b><span class="mono">${fmtT(s.start)}</span></div>`).join('')}</div>
+      <div class="trk">${an.lines.map((l,i)=>l.speaker==='Narrator'?blk('nar','line',i,l.start,l.dur,l.text,wv(Math.max(4,Math.round(l.dur*1.4)),i)):'').join('')}</div>
+      <div class="trk">${an.lines.map((l,i)=>l.speaker!=='Narrator'?blk('dia','line',i,l.start,l.dur,l.speaker+': '+l.text,wv(Math.max(4,Math.round(l.dur*1.4)),i)):'').join('')}</div>
+      <div class="trk">${an.scenes.map((s,i)=>blk('mus','music',i,Math.max(0,s.start-.6),s.end-s.start+SCENE_GAP*.8+.6,cap1(s.mood)+' music')).join('')}</div>
+      <div class="trk">${sfxRows().map(o=>blk('sfx r'+o.row,'sfx',o.id,o.x.t,o.w,SFX_TYPES[o.x.type])).join('')}</div>
+      ${an.scenes.slice(1).map(s=>`<span class="sep" style="left:${pc(s.start-SCENE_GAP/2)}%"></span>`).join('')}
+      <span class="playhead" id="playhead" style="left:${pc(P.t)}%"></span>
+    </div></div>
+  </div>
+  <div class="panel inspector" id="insp">${inspector()}</div>
+  </div>`}
+function sfxRows(){const an=S.an,T=an.total;const all=an.scenes.flatMap((s,si)=>s.sfx.map((x,xi)=>({x,id:si+'.'+xi,w:Math.max(Math.min(x.dur,6),T/50)}))).sort((a,b)=>a.x.t-b.x.t);
+  const ends=[-1,-1];all.forEach(o=>{let r=ends[0]<=o.x.t?0:ends[1]<=o.x.t?1:(ends[0]<ends[1]?0:1);o.row=r;ends[r]=o.x.t+o.w+.3});return all}
+function inspector(){
+  const an=S.an,sb=S.selBlock;
+  if(!sb)return `<span class="sw" style="background:var(--s3);color:var(--mu)"><i class="ph ph-cursor-click"></i></span><div><b>Click any block</b><div class="tx">Hear a line, change a scene's music, or swap, move and remove sound effects. Click the scene names to jump.</div></div><div class="r"><button class="btn btn-s btn-sm" id="addSfx"><i class="ph ph-plus"></i>Add sound effect</button></div>`;
+  if(sb.k==='line'){const l=an.lines[sb.i];return `<span class="sw" style="background:${l.speaker==='Narrator'?'var(--nar)':'var(--dia)'}"><i class="ph ph-${l.speaker==='Narrator'?'book-open-text':'chat-circle'}"></i></span><div style="min-width:0"><b>${esc(l.speaker)} · line ${sb.i+1}</b><div class="tx">${esc(l.text)}</div></div>
+    <div class="r"><select class="inp" id="lineSpk" style="height:36px;width:auto" aria-label="Speaker">${an.chars.map(c=>`<option ${c.name===l.speaker?'selected':''}>${esc(c.name)}</option>`).join('')}</select><button class="btn btn-s btn-sm" id="hearLine"><i class="ph-fill ph-play"></i>Hear line</button><button class="btn btn-g btn-sm" id="playFrom"><i class="ph ph-arrow-line-right"></i>Play from here</button></div>`}
+  if(sb.k==='music'){const s=an.scenes[sb.i];return `<span class="sw" style="background:var(--mus)"><i class="ph ph-music-notes"></i></span><div><b>Scene ${sb.i+1} music · ${cap1(s.mood)}</b><div class="tx">Synthesised music bed. It dips automatically under voices.</div></div>
+    <div class="r"><select class="inp" id="musMood" style="height:36px;width:auto" aria-label="Music mood">${MOODS.map(m=>`<option value="${m}" ${m===s.mood?'selected':''}>${cap1(m)}</option>`).join('')}</select><span class="hint">Volume</span><input type="range" min="0" max="1.5" step=".05" value="${s.musVol??1}" id="musVol" style="width:120px" aria-label="Music volume"><button class="btn btn-s btn-sm" id="hearMus"><i class="ph-fill ph-play"></i>Hear 6 s</button></div>`}
+  const [si,xi]=String(sb.i).split('.').map(Number);const x=an.scenes[si].sfx[xi];if(!x)return '';const l=an.lines[x.line];
+  return `<span class="sw" style="background:var(--sfx)"><i class="ph ph-${SFX_ICON[x.type]}"></i></span><div style="min-width:0"><b>${SFX_TYPES[x.type]}</b><div class="tx">Scene ${si+1} · starts ${fmtT(x.t)} · with “${esc((l?.text||'').slice(0,60))}…”</div></div>
+    <div class="r"><select class="inp" id="sfxType" style="height:36px;width:auto" aria-label="Sound">${Object.entries(SFX_TYPES).map(([k,v])=>`<option value="${k}" ${k===x.type?'selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn btn-s btn-sm" id="sfxEarlier" aria-label="Move to the previous line"><i class="ph ph-caret-left"></i></button><button class="btn btn-s btn-sm" id="sfxLater" aria-label="Move to the next line"><i class="ph ph-caret-right"></i></button>
+    <span class="hint">Volume</span><input type="range" min="0" max="1.5" step=".05" value="${x.vol}" id="sfxVol" style="width:110px" aria-label="Effect volume"><button class="btn btn-s btn-sm" id="hearSfx"><i class="ph-fill ph-play"></i>Hear</button><button class="btn btn-g btn-sm" id="rmSfx"><i class="ph ph-trash"></i>Remove</button></div>`;
+}
+function edited(){mixDirty=true;save()}
+bind.timeline=()=>{
+  const an=S.an;
+  $('#toPlayer').onclick=()=>go('player');$('#tPlay').onclick=()=>P.playing?pause():play();
+  $$('[data-seek]').forEach(d=>d.onclick=()=>seek(+d.dataset.seek));
+  $$('.b').forEach(b=>b.onclick=()=>{S.selBlock={k:b.dataset.k,i:b.dataset.k==='sfx'?b.dataset.i:+b.dataset.i};$$('.b.sel').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');$('#insp').innerHTML=inspector();bindInsp()});
+  bindInsp();refreshPlay();
+};
+function bindInsp(){
+  const an=S.an,sb=S.selBlock,ctx=()=>ac();const on=(id,ev,fn)=>{const e=$('#'+id);if(e)e[ev]=fn};
+  on('addSfx','onclick',()=>{const li=lineAtTime(P.t);const l=an.lines[li];const sc=an.scenes[l.scene];sc.sfx.push({type:'wind',line:li,vol:1});edited();S.selBlock={k:'sfx',i:l.scene+'.'+(sc.sfx.length-1)};render();toast('Added a sound effect at the playhead')});
+  if(!sb)return;
+  if(sb.k==='line'){const l=an.lines[sb.i];
+    on('hearLine','onclick',e=>{if(useEleven()&&bufs[sb.i]){const s=ctx().createBufferSource();s.buffer=bufs[sb.i];s.connect(ctx().destination);s.start()}else previewLine(l.speaker,l.text,e.currentTarget)});
+    on('playFrom','onclick',()=>play(l.start));
+    on('lineSpk','onchange',e=>{l.speaker=e.target.value;delete bufs[sb.i];edited();if(useEleven()){S.built=false;toast('Rebuild needed to re-record this line');go('build')}else render()});}
+  if(sb.k==='music'){const s=an.scenes[sb.i];
+    on('musMood','onchange',e=>{s.mood=e.target.value;edited();render()});
+    on('musVol','oninput',e=>{s.musVol=+e.target.value;setP(e.target)});on('musVol','onchange',edited);
+    on('hearMus','onclick',()=>{pause();const c=ctx();const g=gain(c,1);g.connect(c.destination);scheduleMusic(c,g,s.mood,c.currentTime+.05,c.currentTime+6,s.musVol??1)});}
+  if(sb.k==='sfx'){const [si,xi]=String(sb.i).split('.').map(Number);const sc=an.scenes[si],x=sc.sfx[xi];if(!x)return;
+    const sceneLines=an.lines.map((l,i)=>i).filter(i=>an.lines[i].scene===si);
+    on('sfxType','onchange',e=>{x.type=e.target.value;edited();render()});
+    on('sfxEarlier','onclick',()=>{const k=sceneLines.indexOf(x.line);if(k>0){x.line=sceneLines[k-1];edited();render()}});
+    on('sfxLater','onclick',()=>{const k=sceneLines.indexOf(x.line);if(k<sceneLines.length-1){x.line=sceneLines[k+1];edited();render()}});
+    on('sfxVol','oninput',e=>{x.vol=+e.target.value;setP(e.target)});on('sfxVol','onchange',edited);
+    on('hearSfx','onclick',()=>{pause();const c=ctx();scheduleSfx(c,c.destination,x.type,c.currentTime+.05,x.vol)});
+    on('rmSfx','onclick',()=>{sc.sfx.splice(xi,1);S.selBlock=null;edited();render();toast('Removed')});}
+  $$('#insp input[type=range]').forEach(setP);
+}
+
+/* ---- player ---- */
+function vPlayer(){
+  const an=S.an;layout();const n=innerWidth<860?70:180;const pk=engineMode()==='mix'&&mix?peaks(mix,n):fakePeaks(n);
+  return `<div class="player"><div class="pmain"><div class="glow"></div>
+    <span class="onair" id="onair" style="align-self:flex-start"><span class="dot"></span>PAUSED</span>
+    <h1 class="disp ptitle">${esc(an.title)}</h1>
+    <div class="nowp"><span id="nowScene"></span><span>·</span><span>${esc(an.genre)}</span><span>·</span><span>${an.chars.length} voices</span>${engineMode()==='live'?'<span>·</span><span class="chip" title="Voices play live from this browser">Live browser voices</span>':''}</div>
+    <div class="lyric" id="lyric" aria-live="polite"></div>
+    <div class="bigwave" id="bigwave" role="slider" aria-label="Seek" tabindex="0" aria-valuemin="0" aria-valuemax="${Math.round(an.total)}">${pk.map(v=>`<i style="height:${Math.round(v*100)}%"></i>`).join('')}</div>
+    <div class="markers">${an.scenes.map((s,i)=>`<button data-seek="${s.start}" style="left:${s.start/an.total*100}%">${String(i+1).padStart(2,'0')} ${esc(s.title)}</button>`).join('')}</div>
+    <div class="trans">
+      <button class="sk" id="back" aria-label="Previous line"><i class="ph-fill ph-skip-back"></i></button>
+      <button class="pp" id="pp" aria-label="Play"><i class="ph-fill ph-play"></i></button>
+      <button class="sk" id="fwd" aria-label="Next line"><i class="ph-fill ph-skip-forward"></i></button>
+      <span class="time"><b>${fmtT(P.t)}</b> / ${fmtT(an.total)}</span>
+      <div class="r"><button class="btn btn-s" id="toTl"><i class="ph ph-sliders-horizontal"></i>Edit timeline</button><button class="btn btn-p" id="toEx"><i class="ph ph-download-simple"></i>Download</button></div>
+    </div></div>
+  <aside class="chap"><span class="cap" style="margin:0 12px 8px">Scenes</span>
+    ${an.scenes.map((s,i)=>`<button class="ch" data-seek="${s.start}"><span class="num">${String(i+1).padStart(2,'0')}</span><div><b>${esc(s.title)}</b><small>${cap1(s.mood)}</small></div><span class="mono">${fmtT(s.end-s.start)}</span><span class="bar"><i style="width:0"></i></span></button>`).join('')}
+    <div class="castmini"><span class="cap">Cast</span><div class="avs">${an.chars.map((c,i)=>avatar(c.name,i)).join('')}</div></div></aside></div>`}
+bind.player=()=>{
+  $('#pp').onclick=()=>P.playing?pause():play();
+  $('#back').onclick=()=>{const i=lineAtTime(P.playing?curT():P.t);const l=S.an.lines[i];seek((P.playing?curT():P.t)-l.start>2?l.start:(S.an.lines[i-1]?.start??0))};
+  $('#fwd').onclick=()=>{const i=lineAtTime(P.playing?curT():P.t);const l=S.an.lines[i+1];if(l)seek(l.start)};
+  $$('[data-seek]').forEach(b=>b.onclick=()=>seek(+b.dataset.seek));
+  const bw=$('#bigwave');bw.onclick=e=>{const r=bw.getBoundingClientRect();seek((e.clientX-r.left)/r.width*S.an.total)};
+  bw.onkeydown=e=>{if(e.key==='ArrowRight')seek((P.playing?curT():P.t)+5);if(e.key==='ArrowLeft')seek((P.playing?curT():P.t)-5)};
+  $('#toTl').onclick=()=>go('timeline');$('#toEx').onclick=()=>go('export');
+  P.shownLine=-1;P.idx=lineAtTime(P.t);refreshLine();refreshPlay();if(P.playing)tick();
+};
+
+/* ---- export ---- */
+function vExport(){const an=S.an;layout();const canMix=useEleven();const secs=an.total;
+  const mp3=Math.round(secs*128/8/1024*10)/10,wav=Math.round(secs*44100*4/1024/1024*10)/10;
+  let cw='';let x=11;for(let i=0;i<56;i++){x=(x*9301+49297)%233280;cw+=`<i style="height:${Math.round((.25+x/233280*.75)*100)}%"></i>`}
+  return `<div class="ex">
+  <div class="cover"><div class="rays"></div><span class="cap" style="position:relative">A VoiceVerse audio story</span>
+    <div><div class="disp">${esc(an.title)}</div><div class="cw">${cw}</div></div>
+    <div class="meta"><span>${fmtT(secs)}</span><span>${an.scenes.length} scenes · ${an.chars.length} voices</span></div></div>
+  <div class="opts">
+    <div><span class="cap">Your story is ready</span><h1 class="disp h1" style="margin-top:12px">Take it with you</h1></div>
+    ${canMix?'':`<div class="note"><i class="ph ph-info"></i><span>Browser voices can be played but not recorded, so in demo mode the download holds the <b>music and sound effects only</b>. <button id="openSet2" style="text-decoration:underline">Add an ElevenLabs key</button> to download the full story with voices.</span></div>`}
+    <div class="fmt" role="radiogroup">
+      <button role="radio" aria-checked="${S.fmt==='mp3'}" class="${S.fmt==='mp3'?'on':''}" data-fmt="mp3"><span class="radio"></span><div><b>MP3</b><small>Best for sharing and phones</small></div><span class="mono hint">~${mp3} MB</span></button>
+      <button role="radio" aria-checked="${S.fmt==='wav'}" class="${S.fmt==='wav'?'on':''}" data-fmt="wav"><span class="radio"></span><div><b>WAV</b><small>Full quality, for editing</small></div><span class="mono hint">~${wav} MB</span></button></div>
+    <button class="btn btn-p btn-l" id="dl"><i class="ph ph-download-simple"></i>Download ${S.fmt.toUpperCase()}${canMix?'':' (music + effects)'}</button>
+    <div><span class="cap">Share a link</span>
+      <div style="display:flex;gap:12px;margin-top:12px"><span class="inp mono" style="display:flex;align-items:center;gap:10px;color:var(--mu);font-size:14px;flex:1;min-width:0;overflow:hidden"><i class="ph ph-link"></i>Needs hosting, after the MVP</span><button class="btn btn-s" disabled><i class="ph ph-copy"></i>Copy link</button></div></div>
+    <div class="more"><button class="panel" id="copyScript"><i class="ph ph-scroll"></i><div><b>Copy script</b><small>Every line by speaker</small></div></button><button class="panel" id="newStory"><i class="ph ph-plus-circle"></i><div><b>Make another</b><small>Start a new story</small></div></button></div>
+  </div></div>`}
+bind.export=()=>{
+  $$('[data-fmt]').forEach(b=>b.onclick=()=>{S.fmt=b.dataset.fmt;save();render()});
+  const os=$('#openSet2');if(os)os.onclick=openSettings;
+  $('#copyScript').onclick=async()=>{const an=S.an;const t=`${an.title}\n\n`+an.scenes.map((s,i)=>`SCENE ${i+1}: ${s.title.toUpperCase()} (${s.mood})\n`+an.lines.filter(l=>l.scene===i).map(l=>`${l.speaker.toUpperCase()}: ${l.text}`).join('\n')).join('\n\n');
+    try{await navigator.clipboard.writeText(t);toast('Script copied')}catch(e){download(new Blob([t],{type:'text/plain'}),slug()+'-script.txt');toast('Saved the script as a file')}};
+  $('#newStory').onclick=()=>{pause();S.an=null;S.text='';S.title='';S.built=false;S.cast={};bufs={};mix=null;B={running:false,step:0,prog:0,detail:{},fail:null};save();go('story')};
+  $('#dl').onclick=async e=>{const b=e.currentTarget;const label=b.innerHTML;b.disabled=true;b.innerHTML='<i class="ph ph-circle-notch spin"></i>Preparing…';
+    try{const withV=useEleven();let buf=withV?(mixDirty||!mix?(mix=await renderMix(true),mixDirty=false,mix):mix):await renderMix(false);
+      if(S.fmt==='wav')download(new Blob([toWav(buf)],{type:'audio/wav'}),slug()+(withV?'':'-soundtrack')+'.wav');
+      else{b.innerHTML='<i class="ph ph-circle-notch spin"></i>Encoding MP3…';const blob=await toMp3(buf);download(blob,slug()+(withV?'':'-soundtrack')+'.mp3')}
+      toast('Download started')}catch(err){toast('Could not export: '+err.message)}
+    b.disabled=false;b.innerHTML=label};
+};
+const slug=()=>(S.an?.title||'story').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'story';
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+function toWav(buf){const ch=buf.numberOfChannels,sr=buf.sampleRate,n=buf.length,out=new DataView(new ArrayBuffer(44+n*ch*2));const w=(o,s)=>[...s].forEach((c,i)=>out.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');out.setUint32(4,36+n*ch*2,true);w(8,'WAVE');w(12,'fmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,ch,true);out.setUint32(24,sr,true);out.setUint32(28,sr*ch*2,true);out.setUint16(32,ch*2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,n*ch*2,true);
+  const data=[...Array(ch)].map((_,c)=>buf.getChannelData(c));let o=44;for(let i=0;i<n;i++)for(let c=0;c<ch;c++){const v=clamp(data[c][i],-1,1);out.setInt16(o,v<0?v*0x8000:v*0x7FFF,true);o+=2}return out.buffer}
+function loadScript(src){return new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('could not load the MP3 encoder (offline?). Try WAV.'));document.head.appendChild(s)})}
+async function toMp3(buf){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js');
+  const enc=new lamejs.Mp3Encoder(2,buf.sampleRate,128);const L=buf.getChannelData(0),R=buf.getChannelData(1);const toI=a=>{const o=new Int16Array(a.length);for(let i=0;i<a.length;i++){const v=clamp(a[i],-1,1);o[i]=v<0?v*0x8000:v*0x7FFF}return o};
+  const li=toI(L),ri=toI(R),parts=[];const B=1152*20;for(let i=0;i<li.length;i+=B){const m=enc.encodeBuffer(li.subarray(i,i+B),ri.subarray(i,i+B));if(m.length)parts.push(new Uint8Array(m));if(i%(B*40)===0)await sleep(0)}
+  const e=enc.flush();if(e.length)parts.push(new Uint8Array(e));return new Blob(parts,{type:'audio/mpeg'})}
+
+/* ---- settings ---- */
+function openSettings(){const c=cfg();const remembered=!!store?.getItem('vv-gem')||!!store?.getItem('vv-el');const m=$('#settings');
+  m.innerHTML=`<div class="panel"><h2 class="disp" id="setH">AI keys</h2><p class="hint" style="font-size:15px;margin-bottom:24px">Without keys VoiceVerse runs in demo mode: the built-in story reader and your browser's voices. Keys stay in this browser and are only sent to Google and ElevenLabs.</p>
+    <div class="field"><label for="kGem">Gemini API key <span class="hint">· from Google AI Studio</span></label><input class="inp mono" id="kGem" type="password" autocomplete="off" value="${esc(c.gem)}" placeholder="Paste key"></div>
+    <div class="field"><label for="kGemM">Gemini model</label><input class="inp mono" id="kGemM" value="${esc(c.gemModel)}"></div>
+    <div class="field"><label for="kEl">ElevenLabs API key <span class="hint">· from elevenlabs.io</span></label><input class="inp mono" id="kEl" type="password" autocomplete="off" value="${esc(c.el)}" placeholder="Paste key"></div>
+    <div class="field"><label for="kElM">ElevenLabs model</label><input class="inp mono" id="kElM" value="${esc(c.elModel)}"></div>
+    <label class="check" style="cursor:pointer"><input type="checkbox" id="kRem" ${remembered?'checked':''}> Remember on this laptop</label>
+    <div id="kErr"></div>
+    <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap"><button class="btn btn-g" id="kClose">Cancel</button><button class="btn btn-s" id="kClear">Clear keys</button><button class="btn btn-p" id="kSave">Save</button></div></div>`;
+  m.classList.remove('hidden');$('#kGem').focus();
+  const close=()=>m.classList.add('hidden');$('#kClose').onclick=close;m.onclick=e=>{if(e.target===m)close()};
+  $('#kClear').onclick=()=>{['vv-gem','vv-el','vv-gem-model','vv-el-model'].forEach(k=>KEYS.set(k,'',false));elVoices=null;close();if(S.an){autoCast(S.an);bufs={};mix=null;S.built=false}render();toast('Keys cleared: demo mode')};
+  $('#kSave').onclick=async()=>{const rem=$('#kRem').checked;const el=$('#kEl').value.trim(),oldEl=cfg().el;
+    KEYS.set('vv-gem',$('#kGem').value.trim(),rem);KEYS.set('vv-gem-model',$('#kGemM').value.trim()||'gemini-2.5-flash',rem);KEYS.set('vv-el',el,rem);KEYS.set('vv-el-model',$('#kElM').value.trim()||'eleven_multilingual_v2',rem);
+    if(el&&el!==oldEl){elVoices=null;$('#kSave').innerHTML='<i class="ph ph-circle-notch spin"></i>Checking…';try{await loadElevenVoices();toast(`ElevenLabs connected: ${elVoices.length} voices`)}catch(e){$('#kErr').innerHTML=`<div class="err" style="margin-top:12px"><i class="ph ph-warning-circle"></i><span>${esc(e.message)}</span></div>`;$('#kSave').textContent='Save';return}}
+    if(S.an&&el!==oldEl){autoCast(S.an);bufs={};mix=null;S.built=false;save()}
+    close();render();};
+}
+
+/* ---------- global wiring ---------- */
+$('#logo').onclick=()=>go('home');$('#logo').onkeydown=e=>{if(e.key==='Enter')go('home')};
+$('#steps').onclick=e=>{const b=e.target.closest('[data-step]');if(b&&!b.disabled)go(b.dataset.step)};
+$('#modeBtn').onclick=openSettings;
+addEventListener('keydown',e=>{if(e.key==='Escape')$('#settings').classList.add('hidden');if(e.code==='Space'&&['player','timeline'].includes(S.view)&&!/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();P.playing?pause():play()}});
+load();
+if(S.an&&S.view!=='home'&&!S.cast[S.an.chars[0].name])autoCast(S.an);
+if(useEleven())loadElevenVoices().then(()=>{if(S.an)autoCast(S.an);if(S.view==='voices')render()}).catch(()=>{});
+render();
+</script>
+</body>
+</html>
